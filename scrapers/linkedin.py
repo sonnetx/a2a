@@ -378,7 +378,7 @@ def main():
         json_output = json.dumps(result, indent=2, ensure_ascii=False)
         print(json_output)
         
-        # Also save to file
+        # Also save to fileeee
         if result.get('name'):
             # Use name for filename, fallback to timestamp
             filename = f"{result['name'].replace(' ', '_').lower()}_linkedin.json"
