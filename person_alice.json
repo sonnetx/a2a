@@ -1,0 +1,22 @@
+{
+  "name": "Alice Chen",
+  "age": 28,
+  "occupation": "Software Engineer",
+  "hobbies": ["rock climbing", "cooking", "photography"],
+  "personality": {
+    "traits": ["analytical", "outgoing", "ambitious"],
+    "interests": ["technology", "travel", "food culture"],
+    "goals": ["start own tech company", "climb El Capitan", "visit Japan"]
+  },
+  "background": {
+    "education": "Computer Science PhD",
+    "location": "San Francisco",
+    "family": "Lives alone, close with parents"
+  },
+  "additional_info": {
+    "favorite_foods": ["sushi", "homemade pasta"],
+    "climbing_experience": "5 years, indoor and outdoor",
+    "photography_style": "landscape and street photography",
+    "work_focus": "machine learning and AI"
+  }
+}
