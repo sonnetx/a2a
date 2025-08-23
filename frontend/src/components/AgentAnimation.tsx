@@ -260,115 +260,9 @@ interface ConversationUpdate {
   is_finished: boolean
 }
 
-function ConversationControls({ 
-  availableProfiles, 
-  selectedProfile, 
-  setSelectedProfile, 
-  isRunning, 
-  startConversation, 
-  stopConversation, 
-  resetConversation,
-  connectionStatus
-}: any) {
-  const profileOptions = Object.entries(availableProfiles).map(([id, profile]: [string, any]) => ({
-    id,
-    name: profile.name,
-    occupation: profile.occupation || 'Unknown'
-  }))
+// Removed ConversationControls overlay per request
 
-  // Hide controls during conversation
-  if (isRunning) {
-    return (
-      <Html position={[0, -2, 0]} center style={{ width: 420 }}>
-        <div className="pointer-events-auto select-none rounded-2xl bg-gradient-to-r from-slate-900/95 to-slate-800/95 shadow-2xl border border-slate-600/50 p-4 backdrop-blur-md">
-          <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-white text-sm font-medium">Live Conversation</span>
-            </div>
-            <button
-              onClick={stopConversation}
-              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
-            >
-              ⏹️ Stop
-            </button>
-          </div>
-        </div>
-      </Html>
-    )
-  }
-
-  return (
-    <Html position={[0, -2, 0]} center style={{ width: 640 }}>
-      <div className="pointer-events-auto select-none rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 shadow-2xl border border-slate-200/80 p-6 backdrop-blur-md">
-        {/* Connection Status */}
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-            Live Agent Conversation
-          </h3>
-          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
-            connectionStatus === 'connected' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
-            connectionStatus === 'connecting' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
-            'bg-red-100 text-red-700 border border-red-200'
-          }`}>
-            {connectionStatus}
-          </span>
-        </div>
-
-        {/* Profile Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-slate-700 mb-3">
-            Select Conversation Partner:
-          </label>
-          <select
-            value={selectedProfile}
-            onChange={(e) => setSelectedProfile(e.target.value)}
-            disabled={isRunning}
-            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 bg-white shadow-sm text-slate-700 font-medium transition-all duration-200"
-          >
-            <option value="">Choose a profile...</option>
-            {profileOptions.map(profile => (
-              <option key={profile.id} value={profile.id}>
-                {profile.name} ({profile.occupation})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-4">
-          {!isRunning ? (
-            <button
-              onClick={startConversation}
-              disabled={!selectedProfile || connectionStatus !== 'connected'}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed flex items-center gap-2 font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
-            >
-              ▶️ Start Conversation
-            </button>
-          ) : (
-            <button
-              onClick={stopConversation}
-              className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 flex items-center gap-2 font-semibold shadow-lg transition-all duration-200 transform hover:scale-105"
-            >
-              ⏹️ Stop
-            </button>
-          )}
-          
-          <button
-            onClick={resetConversation}
-            className="px-5 py-3 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-xl hover:from-slate-700 hover:to-slate-800 font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
-          >
-            🔄 Reset
-          </button>
-        </div>
-
-
-      </div>
-    </Html>
-  )
-}
-
-function Scene({ agents, messages, isRunning, availableProfiles, selectedProfile, setSelectedProfile, startConversation, stopConversation, resetConversation, connectionStatus }: any) {
+function Scene({ agents, messages }: any) {
   const positions = useCircleLayout(agents, 6)
   const [currentTime, setCurrentTime] = useState(0)
   const [agentMessages, setAgentMessages] = useState<{[key: string]: string}>({})
@@ -444,16 +338,7 @@ function Scene({ agents, messages, isRunning, availableProfiles, selectedProfile
         )
       })}
 
-      <ConversationControls
-        availableProfiles={availableProfiles}
-        selectedProfile={selectedProfile}
-        setSelectedProfile={setSelectedProfile}
-        isRunning={isRunning}
-        startConversation={startConversation}
-        stopConversation={stopConversation}
-        resetConversation={resetConversation}
-        connectionStatus={connectionStatus}
-      />
+      {/* Controls removed from scene */}
 
       <OrbitControls enablePan={false} maxPolarAngle={Math.PI/2.1} minDistance={6} maxDistance={18} />
     </>
@@ -467,8 +352,8 @@ export default function AgentAnimation() {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
   
   // Conversation state
+  // Fixed profiles: Michael (my_agent) and Alice (person_alice)
   const [availableProfiles, setAvailableProfiles] = useState<{[key: string]: any}>({})
-  const [selectedProfile, setSelectedProfile] = useState<string>('')
   const [isRunning, setIsRunning] = useState(false)
   const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [, setCompatibilityScore] = useState<number | null>(null)
@@ -498,13 +383,11 @@ export default function AgentAnimation() {
       const response = await fetch(`${backendUrl}/api/profiles`)
       const data = await response.json()
       setAvailableProfiles(data.profiles)
-      
       console.log('Loaded profiles:', data.profiles)
-      
-      // Select first profile by default
-      const profileIds = Object.keys(data.profiles)
-      if (profileIds.length > 0) {
-        setSelectedProfile(profileIds[0])
+      // Set the local user agent's display name to match my_agent profile
+      const myName = data.profiles?.['my_agent']?.name
+      if (myName) {
+        setAgents(prev => [{ ...prev[0], name: myName }, ...prev.slice(1)])
       }
     } catch (error) {
       console.error('Error loading profiles:', error)
@@ -589,17 +472,17 @@ export default function AgentAnimation() {
   }
 
   const startConversation = async () => {
-    if (isRunning || !selectedProfile || connectionStatus !== 'connected') return
+    if (isRunning || connectionStatus !== 'connected') return
     
     setIsRunning(true)
     setMessages([])
     setCompatibilityScore(null)
 
-    // Add target agent to the scene
-    const targetProfile = availableProfiles[selectedProfile]
+    // Use fixed IDs: my_agent (user) and person_alice (target)
+    const targetProfile = availableProfiles['person_alice']
     if (targetProfile) {
       const newAgent: Agent = {
-        id: selectedProfile,
+        id: 'person_alice',
         name: targetProfile.name,
         color: '#93C5FD', // Blue for conversation partner
         emoji: '🤖',
@@ -607,7 +490,7 @@ export default function AgentAnimation() {
       }
       
       setAgents(prev => [
-        { ...prev[0], isActive: true, name: 'Animation User' }, // Activate user and set correct name
+        { ...prev[0], isActive: true, name: availableProfiles['my_agent']?.name || prev[0].name },
         newAgent
       ])
     }
@@ -617,9 +500,7 @@ export default function AgentAnimation() {
         ? 'http://localhost:8000' 
         : ''
       
-      // First, ensure the session has a complete profile for the animation
-      await ensureAnimationProfile(backendUrl)
-      
+      // Directly start conversation using fixed user_profile_id = 'my_agent' and target 'person_alice'
       const response = await fetch(`${backendUrl}/api/conversation/start`, {
         method: 'POST',
         headers: {
@@ -627,7 +508,8 @@ export default function AgentAnimation() {
         },
         body: JSON.stringify({
           session_id: sessionId,
-          target_profile_id: selectedProfile,
+          target_profile_id: 'person_alice',
+          user_profile_id: 'my_agent',
           max_turns: 8,
           enable_research: true
         })
@@ -647,78 +529,55 @@ export default function AgentAnimation() {
     }
   }
 
-  const ensureAnimationProfile = async (backendUrl: string) => {
-    try {
-      // Check if session already has a complete profile
-      const sessionResponse = await fetch(`${backendUrl}/api/session/${sessionId}`)
-      if (sessionResponse.ok) {
-        const sessionData = await sessionResponse.json()
-        if (sessionData.profile_complete) {
-          console.log('Session already has complete profile')
-          return
-        }
-      }
-      
-      // Create a profile by sending messages via WebSocket to complete the profile building
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('Setting up animation profile...')
-        
-        // Send profile data step by step
-        const profileSteps = [
-          'Animation User', // name
-          '25', // age  
-          'AI Researcher', // occupation
-          'technology, conversation analysis, AI systems', // hobbies
-          'curious, analytical, observant', // personality
-          'understand AI behavior, research conversation patterns', // goals
-          'Virtual Lab' // location
-        ]
-        
-        for (let i = 0; i < profileSteps.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 100)) // Small delay between steps
-          ws.send(JSON.stringify({ message: profileSteps[i] }))
-        }
-        
-        // Wait a bit for profile to be completed
-        await new Promise(resolve => setTimeout(resolve, 500))
-      }
-    } catch (error) {
-      console.error('Error setting up animation profile:', error)
-    }
-  }
+  // ensureAnimationProfile no longer needed; using predefined my_agent
 
   const stopConversation = () => {
     setIsRunning(false)
   }
 
-  const resetConversation = () => {
-    setMessages([])
-    setCompatibilityScore(null)
-    setIsRunning(false)
-    setAgents(prev => [
-      { ...prev[0], isActive: false }, // Deactivate user
-      ...prev.slice(1).map(agent => ({ ...agent, isActive: false }))
-    ])
-  }
+  // Reset handled implicitly by starting/stopping; explicit button removed
 
   return (
-    <div className="w-full h-[720px] rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
+    <div className="w-full h-[720px] rounded-2xl overflow-hidden border border-gray-200 shadow-sm relative">
       <Canvas shadows camera={{ position: [0, 9, 12], fov: 45 }}>
         <Suspense fallback={<Html center>Loading…</Html>}>
           <Scene 
             agents={agents}
             messages={messages}
-            isRunning={isRunning}
-            availableProfiles={availableProfiles}
-            selectedProfile={selectedProfile}
-            setSelectedProfile={setSelectedProfile}
-            startConversation={startConversation}
-            stopConversation={stopConversation}
-            resetConversation={resetConversation}
-            connectionStatus={connectionStatus}
           />
         </Suspense>
       </Canvas>
+
+      {/* Connection status - top right of screen */}
+      <div className="fixed top-3 right-3 z-50">
+        <span className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
+          connectionStatus === 'connected' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+          connectionStatus === 'connecting' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+          'bg-red-100 text-red-700 border border-red-200'
+        }`}>
+          {connectionStatus}
+        </span>
+      </div>
+
+      {/* Start button - bottom center of screen */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+        {!isRunning ? (
+          <button
+            onClick={startConversation}
+            disabled={connectionStatus !== 'connected'}
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed font-semibold shadow-lg transition-all duration-200"
+          >
+            ▶️ Start Conversation
+          </button>
+        ) : (
+          <button
+            onClick={stopConversation}
+            className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 font-semibold shadow-lg transition-all duration-200"
+          >
+            ⏹️ Stop
+          </button>
+        )}
+      </div>
     </div>
   )
 }

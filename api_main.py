@@ -74,6 +74,8 @@ class UserProfile(BaseModel):
 class ConversationRequest(BaseModel):
     session_id: str
     target_profile_id: str
+    # Optional: if provided, use a predefined profile for the user instead of session profile
+    user_profile_id: Optional[str] = None
     max_turns: int = 8
     enable_research: bool = False
     message_pause_seconds: float = 2.5
@@ -106,7 +108,8 @@ async def startup_event():
 async def load_predefined_profiles():
     """Load predefined profiles from profiles directory"""
     global predefined_profiles
-    profiles_dir = Path("profiles")
+    # Resolve profiles directory relative to this file to avoid CWD issues
+    profiles_dir = (Path(__file__).parent / "profiles").resolve()
     
     for profile_file in profiles_dir.glob("*.json"):
         try:
@@ -397,11 +400,26 @@ async def get_session(session_id: str):
 async def start_conversation(request: ConversationRequest, background_tasks: BackgroundTasks):
     """Start a conversation between user's profile and a target profile"""
     if request.session_id not in user_sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
+        # Initialize a minimal session so streaming works even without chat/profile building
+        user_sessions[request.session_id] = {
+            "profile": None,
+            "chat_history": [],
+            "profile_building_stage": "complete" if request.user_profile_id else "initial",
+            "created_at": datetime.now().isoformat()
+        }
     
     session = user_sessions[request.session_id]
-    if not session.get("profile") or session.get("profile_building_stage") != "complete":
-        raise HTTPException(status_code=400, detail="User profile not complete")
+    
+    # Validate or resolve the user profile source
+    user_profile_data: Optional[Dict[str, Any]] = None
+    if request.user_profile_id:
+        if request.user_profile_id not in predefined_profiles:
+            raise HTTPException(status_code=404, detail="User profile id not found")
+        user_profile_data = predefined_profiles[request.user_profile_id]
+    else:
+        if not session.get("profile") or session.get("profile_building_stage") != "complete":
+            raise HTTPException(status_code=400, detail="User profile not complete")
+        user_profile_data = session["profile"]
     
     if request.target_profile_id not in predefined_profiles:
         raise HTTPException(status_code=404, detail="Target profile not found")
@@ -416,13 +434,14 @@ async def start_conversation(request: ConversationRequest, background_tasks: Bac
         request.target_profile_id,
         request.max_turns,
         request.enable_research,
-        request.message_pause_seconds
+        request.message_pause_seconds,
+        user_profile_data,
     )
     
     return {
         "conversation_id": conversation_id,
         "status": "started",
-        "user_profile": session["profile"]["name"],
+        "user_profile": user_profile_data.get("name", "Unknown"),
         "target_profile": predefined_profiles[request.target_profile_id]["name"]
     }
 
@@ -465,20 +484,22 @@ async def run_conversation_background(
     session_id: str,
     target_profile_id: str,
     max_turns: int,
-    enable_research: bool = False,
-    message_pause_seconds: float = 5.0
+    enable_research: bool,
+    message_pause_seconds: float = 5.0,
+    user_profile_data: Optional[Dict[str, Any]] = None,
 ):
     """Run conversation in background and stream updates to client"""
     try:
         client = AsyncDedalus()
         
-        # Create user agent from session profile
-        user_profile = user_sessions[session_id]["profile"]
-        print(f"🔍 Creating user agent with profile: {json.dumps(user_profile, indent=2)}")
+        # Resolve user profile: explicit param takes precedence, otherwise from session
+        if user_profile_data is None:
+            user_profile_data = user_sessions[session_id]["profile"]
+        print(f"🔍 Creating user agent with profile: {json.dumps(user_profile_data, indent=2)}")
         
         user_agent = PersonAgent(
-            name=user_profile["name"],
-            profile_data=user_profile,
+            name=user_profile_data["name"],
+            profile_data=user_profile_data,
             client=client
         )
         

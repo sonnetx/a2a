@@ -1,0 +1,16 @@
+{
+  "name": "Michael",
+  "age": 27,
+  "occupation": "AI Engineer",
+  "hobbies": ["coding", "basketball", "music"],
+  "personality": {
+    "traits": ["curious", "analytical", "builder"],
+    "interests": ["LLMs", "agents", "UX"],
+    "goals": ["ship great AI products", "learn continuously", "help people"]
+  },
+  "background": {
+    "education": "CS",
+    "location": "San Francisco"
+  }
+}
+
