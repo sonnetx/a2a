@@ -1,8 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import ChatInterface from './components/ChatInterface'
+import AgentInteraction from './components/AgentInteraction'
+import TabNavigation from './components/TabNavigation'
 import Header from './components/Header'
 
 function App() {
+  const [activeTab, setActiveTab] = useState('chatbot')
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated background elements */}
@@ -16,7 +20,10 @@ function App() {
       <div className="relative z-10 flex flex-col h-screen">
         <Header />
         <div className="flex-1 flex items-center justify-center p-4">
-          <ChatInterface />
+          <div className="w-full">
+            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            {activeTab === 'chatbot' ? <ChatInterface /> : <AgentInteraction />}
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bot, Sparkles } from 'lucide-react'
+import { Bot, Sparkles, Users } from 'lucide-react'
 
 const Header: React.FC = () => {
   return (
@@ -8,11 +8,12 @@ const Header: React.FC = () => {
         <div className="flex items-center space-x-3">
           <div className="relative">
             <Bot className="w-8 h-8 text-primary-400" />
-            <Sparkles className="w-4 h-4 text-accent-400 absolute -top-1 -right-1 animate-pulse" />
+            <Users className="w-6 h-6 text-accent-400 absolute -top-1 -right-1" />
+            <Sparkles className="w-4 h-4 text-yellow-400 absolute -bottom-1 -left-1 animate-pulse" />
           </div>
           <div>
-            <h1 className="text-xl font-bold gradient-text">A2A Chatbot</h1>
-            <p className="text-sm text-white/70">Powered by AI</p>
+            <h1 className="text-xl font-bold gradient-text">A2A Platform</h1>
+            <p className="text-sm text-white/70">AI Chatbot & Agent Interaction</p>
           </div>
         </div>
         
