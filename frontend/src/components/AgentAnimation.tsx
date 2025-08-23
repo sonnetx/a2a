@@ -46,7 +46,15 @@ function Sparkle({ position = [0, 0, 0] as Vec3 }) {
   )
 }
 
-function AgentAvatar({ id, name, color = '#6EE7B7', emoji = '🤖', position }: { id: string, name?: string, color?: string, emoji?: string, position: Vec3 }) {
+function AgentAvatar({ id, name, color = '#6EE7B7', emoji = '🤖', position, isActive = false, currentMessage = null }: { 
+  id: string, 
+  name?: string, 
+  color?: string, 
+  emoji?: string, 
+  position: Vec3,
+  isActive?: boolean,
+  currentMessage?: string | null
+}) {
   const group = useRef<any>()
   useFrame(({ clock }) => {
     if (group.current) {
@@ -54,11 +62,18 @@ function AgentAvatar({ id, name, color = '#6EE7B7', emoji = '🤖', position }: 
       group.current.rotation.y = tilt
     }
   })
+
+  // Bubble sizing tuned for a wide horizontal rectangle
+  const messageLength = currentMessage ? currentMessage.length : 0
+  const bubbleWidth = Math.min(messageLength * 0.06 + 1.6, 5.8)
+  const bubbleHeight = 1.05
+  const textMaxWidth = Math.max(bubbleWidth - 0.35, 1.2)
+  const tailY = -bubbleHeight / 2 - 0.08
   return (
     <group ref={group} position={position}>
       <mesh castShadow receiveShadow>
         <sphereGeometry args={[0.6, 32, 32]} />
-        <meshStandardMaterial>
+        <meshStandardMaterial opacity={isActive ? 1.0 : 0.6} transparent>
           <GradientTexture stops={[0, 0.5, 1]} colors={['white', color, '#ffffff']} size={1024} />
         </meshStandardMaterial>
       </mesh>
@@ -68,15 +83,63 @@ function AgentAvatar({ id, name, color = '#6EE7B7', emoji = '🤖', position }: 
       </Billboard>
 
       <Billboard position={[0, -1.0, 0]}>
-        <Text fontSize={0.28} color="#2b2b2b" outlineColor="#ffffff" outlineWidth={0.015}>{name || id}</Text>
+        <Text fontSize={0.28} color={isActive ? "#2b2b2b" : "#666666"} outlineColor="#ffffff" outlineWidth={0.015}>
+          {name || id}
+        </Text>
       </Billboard>
 
-      <Sparkle position={[0.9, 0.2, 0]} />
+      {/* Speech Bubble */}
+      {currentMessage && (
+        <Billboard position={[0, 1.8, 0]}>
+          <group>
+            {/* Shadow */}
+            <mesh position={[0.05, -0.05, -0.03]}>
+              <planeGeometry args={[bubbleWidth + 0.2, bubbleHeight + 0.2]} />
+              <meshBasicMaterial color="#000000" opacity={0.08} transparent />
+            </mesh>
+
+            {/* Border */}
+            <mesh position={[0, 0, -0.005]}>
+              <planeGeometry args={[bubbleWidth + 0.08, bubbleHeight + 0.08]} />
+              <meshBasicMaterial color="#e6ebf0" opacity={0.9} transparent />
+            </mesh>
+
+            {/* Background */}
+            <mesh position={[0, 0, -0.01]}
+                  scale={[1, 1, 1]}
+            >
+              <planeGeometry args={[bubbleWidth, bubbleHeight]} />
+              <meshBasicMaterial color="#ffffff" opacity={0.98} transparent />
+            </mesh>
+
+            {/* Tail */}
+            <mesh position={[0, tailY, -0.01]}>
+              <coneGeometry args={[0.08, 0.18, 3]} />
+              <meshBasicMaterial color="#ffffff" opacity={0.98} transparent />
+            </mesh>
+            
+            {/* Text */}
+            <Text
+              fontSize={0.14}
+              maxWidth={textMaxWidth}
+              lineHeight={1.28}
+              color="#1e293b"
+              anchorX="center"
+              anchorY="middle"
+              textAlign="center"
+            >
+              {currentMessage.length > 220 ? currentMessage.substring(0, 220) + '...' : currentMessage}
+            </Text>
+          </group>
+        </Billboard>
+      )}
+
+      {isActive && <Sparkle position={[0.9, 0.2, 0]} />}
     </group>
   )
 }
 
-function MessageOrb({ fromPos, toPos, text, bornAt, duration = 2.0, height = 1.5, color = '#60A5FA', now }: {
+function MessageOrb({ fromPos, toPos, text, bornAt, duration = 3.0, height = 1.5, color = '#60A5FA', now }: {
   fromPos: Vec3
   toPos: Vec3
   text?: string
@@ -101,7 +164,9 @@ function MessageOrb({ fromPos, toPos, text, bornAt, duration = 2.0, height = 1.5
       </mesh>
       {text && (
         <Billboard position={[0, 0.45, 0]}>
-          <Text fontSize={0.22} maxWidth={2} lineHeight={1.2} color="#1f2937">{text}</Text>
+          <Text fontSize={0.18} maxWidth={3} lineHeight={1.2} color="#1f2937" anchorX="center" anchorY="middle">
+            {text.length > 100 ? text.substring(0, 100) + '...' : text}
+          </Text>
         </Billboard>
       )}
     </group>
@@ -135,56 +200,171 @@ function Ring({ r = 6, y = 0.001 }) {
   )
 }
 
-function usePlayback(duration: number, { autoPlay = true, speed = 1 } = {}) {
-  const [playing, setPlaying] = useState(autoPlay)
-  const [time, setTime] = useState(0)
-  const speedRef = useRef(speed)
-  useEffect(() => { speedRef.current = speed }, [speed])
-
-  useFrame((_, delta) => {
-    if (!playing) return
-    setTime((t) => {
-      const next = t + delta * (speedRef.current as number)
-      return next > duration ? duration : next
-    })
-  })
-
-  const play = () => setPlaying(true)
-  const pause = () => setPlaying(false)
-  const seek = (t: number) => setTime(Math.max(0, Math.min(duration, t)))
-  return { time, playing, play, pause, seek }
+// Types for real conversation data
+interface ConversationMessage {
+  id: string
+  speaker: string
+  message: string
+  timestamp: number
+  turnNumber: number
 }
 
-function HUD({ time, duration, playing, onPlay, onPause, onSeek, onSpeed }: any) {
+interface Agent {
+  id: string
+  name: string
+  occupation?: string
+  color: string
+  emoji: string
+  isActive: boolean
+}
+
+interface ConversationUpdate {
+  conversation_id: string
+  speaker: string
+  message: string
+  compatibility_scores?: {
+    [key: string]: number
+  }
+  turn_number: number
+  is_finished: boolean
+}
+
+function ConversationControls({ 
+  availableProfiles, 
+  selectedProfile, 
+  setSelectedProfile, 
+  isRunning, 
+  startConversation, 
+  stopConversation, 
+  resetConversation,
+  connectionStatus
+}: any) {
+  const profileOptions = Object.entries(availableProfiles).map(([id, profile]: [string, any]) => ({
+    id,
+    name: profile.name,
+    occupation: profile.occupation || 'Unknown'
+  }))
+
+  // Hide controls during conversation
+  if (isRunning) {
+    return (
+      <Html position={[0, -2, 0]} center style={{ width: 420 }}>
+        <div className="pointer-events-auto select-none rounded-2xl bg-gradient-to-r from-slate-900/95 to-slate-800/95 shadow-2xl border border-slate-600/50 p-4 backdrop-blur-md">
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-white text-sm font-medium">Live Conversation</span>
+            </div>
+            <button
+              onClick={stopConversation}
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              ⏹️ Stop
+            </button>
+          </div>
+        </div>
+      </Html>
+    )
+  }
+
   return (
-    <Html position={[0, 0, 0]} center style={{ width: 420 }}>
-      <div className="pointer-events-auto select-none rounded-2xl bg-white/80 shadow-xl border border-gray-200 p-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <button onClick={playing ? onPause : onPlay} className="rounded-xl px-3 py-1.5 text-sm font-medium bg-gray-900 text-white">
-            {playing ? 'Pause' : 'Play'}
-          </button>
-          <input type="range" min={0} max={duration} step={0.01} value={time} onChange={(e) => onSeek(parseFloat((e.target as HTMLInputElement).value))} className="flex-1"/>
-          <span className="text-xs font-mono text-gray-700 w-20 text-right">{time.toFixed(1)}s / {duration.toFixed(1)}s</span>
-          <select onChange={(e) => onSpeed(parseFloat(e.target.value))} className="ml-2 rounded-md border px-2 py-1 text-sm">
-            <option value={0.5}>0.5×</option>
-            <option value={1}>1×</option>
-            <option value={1.5}>1.5×</option>
-            <option value={2}>2×</option>
+    <Html position={[0, -2, 0]} center style={{ width: 640 }}>
+      <div className="pointer-events-auto select-none rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 shadow-2xl border border-slate-200/80 p-6 backdrop-blur-md">
+        {/* Connection Status */}
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            Live Agent Conversation
+          </h3>
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
+            connectionStatus === 'connected' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+            connectionStatus === 'connecting' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+            'bg-red-100 text-red-700 border border-red-200'
+          }`}>
+            {connectionStatus}
+          </span>
+        </div>
+
+        {/* Profile Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-3">
+            Select Conversation Partner:
+          </label>
+          <select
+            value={selectedProfile}
+            onChange={(e) => setSelectedProfile(e.target.value)}
+            disabled={isRunning}
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 bg-white shadow-sm text-slate-700 font-medium transition-all duration-200"
+          >
+            <option value="">Choose a profile...</option>
+            {profileOptions.map(profile => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} ({profile.occupation})
+              </option>
+            ))}
           </select>
         </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-4">
+          {!isRunning ? (
+            <button
+              onClick={startConversation}
+              disabled={!selectedProfile || connectionStatus !== 'connected'}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed flex items-center gap-2 font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
+            >
+              ▶️ Start Conversation
+            </button>
+          ) : (
+            <button
+              onClick={stopConversation}
+              className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 flex items-center gap-2 font-semibold shadow-lg transition-all duration-200 transform hover:scale-105"
+            >
+              ⏹️ Stop
+            </button>
+          )}
+          
+          <button
+            onClick={resetConversation}
+            className="px-5 py-3 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-xl hover:from-slate-700 hover:to-slate-800 font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
+          >
+            🔄 Reset
+          </button>
+        </div>
+
+
       </div>
     </Html>
   )
 }
 
-function Scene({ agents, interactions, duration: durationProp }: any) {
+function Scene({ agents, messages, isRunning, availableProfiles, selectedProfile, setSelectedProfile, startConversation, stopConversation, resetConversation, connectionStatus }: any) {
   const positions = useCircleLayout(agents, 6)
-  const duration = useMemo(() => {
-    return durationProp ?? Math.max(6, Math.max(...interactions.map((m: any) => m.t)) + 3)
-  }, [interactions, durationProp])
+  const [currentTime, setCurrentTime] = useState(0)
+  const [agentMessages, setAgentMessages] = useState<{[key: string]: string}>({})
 
-  const [speed, setSpeed] = useState(1)
-  const { time, playing, play, pause, seek } = usePlayback(duration, { autoPlay: true, speed })
+  useFrame((_, delta) => {
+    setCurrentTime(t => t + delta)
+  })
+
+  // Update agent messages when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) {
+      const latestMessage = messages[messages.length - 1]
+      setAgentMessages(prev => ({
+        ...prev,
+        [latestMessage.speaker]: latestMessage.message
+      }))
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        setAgentMessages(prev => {
+          const updated = { ...prev }
+          delete updated[latestMessage.speaker]
+          return updated
+        })
+      }, 5000)
+    }
+  }, [messages])
 
   return (
     <>
@@ -193,21 +373,55 @@ function Scene({ agents, interactions, duration: durationProp }: any) {
       <Ground />
       <Ring r={6} />
 
-      {agents.map((a: any) => (
-        <AgentAvatar key={a.id} id={a.id} name={a.name} color={a.color} emoji={a.emoji} position={positions.get(a.id) as Vec3} />
+      {agents.map((agent: Agent) => (
+        <AgentAvatar 
+          key={agent.id} 
+          id={agent.id} 
+          name={agent.name} 
+          color={agent.color} 
+          emoji={agent.emoji} 
+          position={positions.get(agent.id) as Vec3}
+          isActive={agent.isActive}
+          currentMessage={agentMessages[agent.name] || null}
+        />
       ))}
 
-      {interactions.map((m: any, i: number) => {
-        const fromPos = positions.get(m.from)
-        const toPos = positions.get(m.to)
+      {messages.map((message: ConversationMessage) => {
+        // Find speaker and target for message flow
+        const speakerAgent = agents.find((a: Agent) => a.name === message.speaker)
+        const otherAgents = agents.filter((a: Agent) => a.name !== message.speaker && a.isActive)
+        
+        if (!speakerAgent || otherAgents.length === 0) return null
+        
+        const fromPos = positions.get(speakerAgent.id)
+        const toPos = positions.get(otherAgents[0].id) // Send to first other active agent
+        
         if (!fromPos || !toPos) return null
-        const color = m.kind === 'email' ? '#F59E0B' : m.kind === 'tool' ? '#10B981' : '#60A5FA'
+        
         return (
-          <MessageOrb key={m.id || i} fromPos={fromPos} toPos={toPos} text={m.text} bornAt={m.t} now={time} color={color} />
+          <MessageOrb 
+            key={message.id} 
+            fromPos={fromPos} 
+            toPos={toPos} 
+            text={message.message} 
+            bornAt={message.timestamp} 
+            now={currentTime}
+            color={speakerAgent.color}
+            duration={4.0}
+          />
         )
       })}
 
-      <HUD time={time} duration={duration} playing={playing} onPlay={play} onPause={pause} onSeek={seek} onSpeed={setSpeed} />
+      <ConversationControls
+        availableProfiles={availableProfiles}
+        selectedProfile={selectedProfile}
+        setSelectedProfile={setSelectedProfile}
+        isRunning={isRunning}
+        startConversation={startConversation}
+        stopConversation={stopConversation}
+        resetConversation={resetConversation}
+        connectionStatus={connectionStatus}
+      />
 
       <OrbitControls enablePan={false} maxPolarAngle={Math.PI/2.1} minDistance={6} maxDistance={18} />
     </>
@@ -215,32 +429,264 @@ function Scene({ agents, interactions, duration: durationProp }: any) {
 }
 
 export default function AgentAnimation() {
-  const agents = [
-    { id: 'agent_alice', name: 'Alice', color: '#34D399', emoji: '🧠' },
-    { id: 'agent_bob', name: 'Bob', color: '#93C5FD', emoji: '📨' },
-    { id: 'nova_lead', name: 'Nova PM', color: '#F472B6', emoji: '🩺' },
-  ]
+  // WebSocket connection state
+  const [ws, setWs] = useState<WebSocket | null>(null)
+  const [sessionId] = useState(() => `animation_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
+  
+  // Conversation state
+  const [availableProfiles, setAvailableProfiles] = useState<{[key: string]: any}>({})
+  const [selectedProfile, setSelectedProfile] = useState<string>('')
+  const [isRunning, setIsRunning] = useState(false)
+  const [messages, setMessages] = useState<ConversationMessage[]>([])
+  const [, setCompatibilityScore] = useState<number | null>(null)
+  
+  // Agent state - dynamic based on conversation
+  const [agents, setAgents] = useState<Agent[]>([
+    { id: 'user', name: 'You', color: '#FBBF24', emoji: '🧑', isActive: false },
+  ])
 
-  const interactions = [
-    { from: 'agent_alice', to: 'agent_bob', t: 0.5, text: 'Goal: warm intro + pilot scope', kind: 'chat' },
-    { from: 'agent_bob', to: 'nova_lead',  t: 2.0, text: 'Draft outreach…', kind: 'chat' },
-    { from: 'agent_bob', to: 'agent_alice', t: 3.4, text: 'Need your availability & redlines', kind: 'chat' },
-    { from: 'agent_bob', to: 'human',      t: 4.0, text: 'Escalate: ask controller (email)', kind: 'email' },
-    { from: 'agent_alice', to: 'agent_bob', t: 6.5, text: 'Controller replied — finalize', kind: 'chat' },
-    { from: 'agent_bob', to: 'nova_lead',  t: 8.2, text: 'Final message w/ constraints', kind: 'chat' },
-  ].map((m, i) => ({ id: `evt_${i}`, ...m }))
+  // Load profiles and setup WebSocket on mount
+  useEffect(() => {
+    loadProfiles()
+    connectWebSocket()
+    return () => {
+      if (ws) {
+        ws.close()
+      }
+    }
+  }, [])
 
-  const agentsWithHuman = useMemo(() => ([...agents, { id: 'human', name: 'You', color: '#FBBF24', emoji: '🧑' }]), [])
+  const loadProfiles = async () => {
+    try {
+      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://localhost:8000' 
+        : ''
+      
+      const response = await fetch(`${backendUrl}/api/profiles`)
+      const data = await response.json()
+      setAvailableProfiles(data.profiles)
+      
+      console.log('Loaded profiles:', data.profiles)
+      
+      // Select first profile by default
+      const profileIds = Object.keys(data.profiles)
+      if (profileIds.length > 0) {
+        setSelectedProfile(profileIds[0])
+      }
+    } catch (error) {
+      console.error('Error loading profiles:', error)
+    }
+  }
+
+  const connectWebSocket = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const host = window.location.hostname
+    const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80')
+    
+    // For development, assume backend is on port 8000
+    const backendPort = host === 'localhost' || host === '127.0.0.1' ? '8000' : port
+    const wsUrl = `${protocol}//${host}:${backendPort}/ws/${sessionId}`
+    
+    console.log('Attempting WebSocket connection to:', wsUrl)
+    setConnectionStatus('connecting')
+    
+    const websocket = new WebSocket(wsUrl)
+    
+    websocket.onopen = () => {
+      setConnectionStatus('connected')
+      console.log('WebSocket connected for animation:', wsUrl)
+    }
+    
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      console.log('WebSocket message received:', data)
+      handleWebSocketMessage(data)
+    }
+    
+    websocket.onclose = (event) => {
+      setConnectionStatus('disconnected')
+      console.log('WebSocket disconnected:', event.code, event.reason)
+    }
+    
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error)
+      setConnectionStatus('disconnected')
+    }
+    
+    setWs(websocket)
+  }
+
+  const handleWebSocketMessage = (data: any) => {
+    if (data.type === 'conversation_update') {
+      const update: ConversationUpdate = data.data
+      
+      if (update.speaker === 'system') {
+        // Handle system messages
+        if (update.is_finished) {
+          setIsRunning(false)
+          if (update.compatibility_scores?.final_compatibility) {
+            setCompatibilityScore(update.compatibility_scores.final_compatibility)
+          }
+        }
+        return
+      }
+      
+      // Add message to animation
+      const message: ConversationMessage = {
+        id: `${update.conversation_id}_${update.turn_number}`,
+        speaker: update.speaker,
+        message: update.message,
+        timestamp: Date.now() / 1000, // Convert to seconds for animation timing
+        turnNumber: update.turn_number
+      }
+      
+      setMessages(prev => [...prev, message])
+      
+      // Update compatibility score
+      if (update.compatibility_scores?.average) {
+        setCompatibilityScore(update.compatibility_scores.average)
+      }
+      
+      // Update agent activity
+      setAgents(prev => prev.map(agent => ({
+        ...agent,
+        isActive: agent.name === update.speaker || agent.name === 'You'
+      })))
+    }
+  }
+
+  const startConversation = async () => {
+    if (isRunning || !selectedProfile || connectionStatus !== 'connected') return
+    
+    setIsRunning(true)
+    setMessages([])
+    setCompatibilityScore(null)
+
+    // Add target agent to the scene
+    const targetProfile = availableProfiles[selectedProfile]
+    if (targetProfile) {
+      const newAgent: Agent = {
+        id: selectedProfile,
+        name: targetProfile.name,
+        color: '#93C5FD', // Blue for conversation partner
+        emoji: '🤖',
+        isActive: true
+      }
+      
+      setAgents(prev => [
+        { ...prev[0], isActive: true, name: 'Animation User' }, // Activate user and set correct name
+        newAgent
+      ])
+    }
+
+    try {
+      const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? 'http://localhost:8000' 
+        : ''
+      
+      // First, ensure the session has a complete profile for the animation
+      await ensureAnimationProfile(backendUrl)
+      
+      const response = await fetch(`${backendUrl}/api/conversation/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionId,
+          target_profile_id: selectedProfile,
+          max_turns: 8,
+          enable_research: true
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to start conversation: ${response.status} - ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log('Animation conversation started:', result)
+      
+    } catch (error) {
+      console.error('Error starting conversation:', error)
+      setIsRunning(false)
+    }
+  }
+
+  const ensureAnimationProfile = async (backendUrl: string) => {
+    try {
+      // Check if session already has a complete profile
+      const sessionResponse = await fetch(`${backendUrl}/api/session/${sessionId}`)
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json()
+        if (sessionData.profile_complete) {
+          console.log('Session already has complete profile')
+          return
+        }
+      }
+      
+      // Create a profile by sending messages via WebSocket to complete the profile building
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log('Setting up animation profile...')
+        
+        // Send profile data step by step
+        const profileSteps = [
+          'Animation User', // name
+          '25', // age  
+          'AI Researcher', // occupation
+          'technology, conversation analysis, AI systems', // hobbies
+          'curious, analytical, observant', // personality
+          'understand AI behavior, research conversation patterns', // goals
+          'Virtual Lab' // location
+        ]
+        
+        for (let i = 0; i < profileSteps.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100)) // Small delay between steps
+          ws.send(JSON.stringify({ message: profileSteps[i] }))
+        }
+        
+        // Wait a bit for profile to be completed
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    } catch (error) {
+      console.error('Error setting up animation profile:', error)
+    }
+  }
+
+  const stopConversation = () => {
+    setIsRunning(false)
+  }
+
+  const resetConversation = () => {
+    setMessages([])
+    setCompatibilityScore(null)
+    setIsRunning(false)
+    setAgents(prev => [
+      { ...prev[0], isActive: false }, // Deactivate user
+      ...prev.slice(1).map(agent => ({ ...agent, isActive: false }))
+    ])
+  }
 
   return (
     <div className="w-full h-[720px] rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
       <Canvas shadows camera={{ position: [0, 9, 12], fov: 45 }}>
         <Suspense fallback={<Html center>Loading…</Html>}>
-          <Scene agents={agentsWithHuman} interactions={interactions} />
+          <Scene 
+            agents={agents}
+            messages={messages}
+            isRunning={isRunning}
+            availableProfiles={availableProfiles}
+            selectedProfile={selectedProfile}
+            setSelectedProfile={setSelectedProfile}
+            startConversation={startConversation}
+            stopConversation={stopConversation}
+            resetConversation={resetConversation}
+            connectionStatus={connectionStatus}
+          />
         </Suspense>
       </Canvas>
     </div>
   )
 }
-
-

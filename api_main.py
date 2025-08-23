@@ -79,6 +79,7 @@ class ConversationRequest(BaseModel):
     target_profile_id: str
     max_turns: int = 8
     enable_research: bool = False
+    message_pause_seconds: float = 5.0
 
 
 class ChatResponse(BaseModel):
@@ -482,7 +483,8 @@ async def start_conversation(request: ConversationRequest, background_tasks: Bac
         request.session_id,
         request.target_profile_id,
         request.max_turns,
-        request.enable_research
+        request.enable_research,
+        request.message_pause_seconds
     )
     
     return {
@@ -531,7 +533,8 @@ async def run_conversation_background(
     session_id: str,
     target_profile_id: str,
     max_turns: int,
-    enable_research: bool
+    enable_research: bool,
+    message_pause_seconds: float = 5.0
 ):
     """Run conversation in background and stream updates to client"""
     try:
@@ -539,6 +542,8 @@ async def run_conversation_background(
         
         # Create user agent from session profile
         user_profile = user_sessions[session_id]["profile"]
+        print(f"🔍 Creating user agent with profile: {json.dumps(user_profile, indent=2)}")
+        
         user_agent = PersonAgent(
             name=user_profile["name"],
             profile_data=user_profile,
@@ -560,6 +565,9 @@ async def run_conversation_background(
         active_conversations[conversation_id] = conv_manager
         
         # Send conversation start notification
+        print(f"\n🎬 STARTING CONVERSATION: {user_agent.name} ↔ {target_agent.name}")
+        print("=" * 60)
+        
         await send_conversation_update(session_id, {
             "conversation_id": conversation_id,
             "speaker": "system",
@@ -569,7 +577,7 @@ async def run_conversation_background(
         })
         
         # Run the conversation with streaming updates
-        await run_conversation_with_streaming(conv_manager, session_id, max_turns, enable_research)
+        await run_conversation_with_streaming(conv_manager, session_id, max_turns, enable_research, message_pause_seconds)
         
     except Exception as e:
         logger.error(f"Error in background conversation {conversation_id}: {e}")
@@ -589,7 +597,8 @@ async def run_conversation_with_streaming(
     conv_manager: ConversationManager,
     session_id: str,
     max_turns: int,
-    enable_research: bool
+    enable_research: bool,
+    message_pause_seconds: float = 5.0
 ):
     """Run conversation with real-time streaming to client"""
     try:
@@ -608,6 +617,8 @@ async def run_conversation_with_streaming(
         introduction = await conv_manager.agent1.introduce()
         conv_manager.conversation_history.add_message(conv_manager.agent1.name, introduction)
         
+        print(f"\n💬 {conv_manager.agent1.name}: {introduction}")
+        
         await send_conversation_update(session_id, {
             "conversation_id": conv_manager.conversation_id,
             "speaker": conv_manager.agent1.name,
@@ -619,6 +630,10 @@ async def run_conversation_with_streaming(
         # Update tracking
         conv_manager._update_observations(conv_manager.agent1, introduction, is_introduction=True)
         
+        # Pause to allow frontend to display the introduction message
+        print(f"⏳ Waiting {message_pause_seconds}s for introduction display...")
+        await asyncio.sleep(message_pause_seconds)
+        
         # Main conversation loop
         current_speaker = conv_manager.agent2
         other_speaker = conv_manager.agent1
@@ -628,6 +643,9 @@ async def run_conversation_with_streaming(
             # Generate response
             response = await current_speaker.respond_to(other_speaker.name, last_message)
             conv_manager.conversation_history.add_message(current_speaker.name, response)
+            
+            # Log conversation to terminal
+            print(f"💬 {current_speaker.name}: {response}")
             
             # Update observations
             conv_manager._update_observations(current_speaker, response)
@@ -682,7 +700,9 @@ async def run_conversation_with_streaming(
             current_speaker, other_speaker = other_speaker, current_speaker
             last_message = response
             
-            await asyncio.sleep(1)  # Brief pause between messages
+            # Pause to allow frontend to display the message bubble before next response
+            print(f"⏳ Waiting {message_pause_seconds}s for message display...")
+            await asyncio.sleep(message_pause_seconds)
         
         # Send final analysis
         try:
@@ -699,6 +719,12 @@ Conversation ended! Final compatibility analysis:
 • Status: {results.get('overall_status', 'Unknown')}
 • Total turns: {turn + 1}
 """
+        
+        print(f"\n🏁 CONVERSATION ENDED")
+        print("=" * 60)
+        print(f"🎯 Final Compatibility: {final_compatibility:.3f} ({results.get('overall_status', 'Unknown')})")
+        print(f"📊 Total Turns: {turn + 1}")
+        print("=" * 60)
         
         await send_conversation_update(session_id, {
             "conversation_id": conv_manager.conversation_id,
