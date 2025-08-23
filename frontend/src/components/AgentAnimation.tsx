@@ -200,6 +200,37 @@ function Ring({ r = 6, y = 0.001 }) {
   )
 }
 
+function FakeAgents() {
+  const fakePositions: Vec3[] = useMemo(() => ([
+    [-12, 0, 12],
+    [10, 0, -8],
+    [14, 0, 4],
+    [-15, 0, -10],
+    [6, 0, 14],
+    [-6, 0, -14],
+    [0, 0, 16],
+  ]), [])
+
+  const colors = ['#CBD5E1', '#D1FAE5', '#BFDBFE', '#FDE68A', '#FBCFE8', '#A7F3D0', '#E9D5FF']
+
+  return (
+    <group>
+      {fakePositions.map((p, i) => (
+        <AgentAvatar
+          key={`fake_${i}`}
+          id={`fake_${i}`}
+          name=""
+          color={colors[i % colors.length]}
+          emoji=""
+          position={p}
+          isActive={false}
+          currentMessage={null}
+        />
+      ))}
+    </group>
+  )
+}
+
 // Types for real conversation data
 interface ConversationMessage {
   id: string
@@ -372,6 +403,7 @@ function Scene({ agents, messages, isRunning, availableProfiles, selectedProfile
       <directionalLight position={[6, 10, 6]} intensity={0.9} castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
       <Ground />
       <Ring r={6} />
+      <FakeAgents />
 
       {agents.map((agent: Agent) => (
         <AgentAvatar 

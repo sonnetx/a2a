@@ -76,7 +76,7 @@ class ConversationRequest(BaseModel):
     target_profile_id: str
     max_turns: int = 8
     enable_research: bool = False
-    message_pause_seconds: float = 5.0
+    message_pause_seconds: float = 2.5
 
 
 class ChatResponse(BaseModel):
