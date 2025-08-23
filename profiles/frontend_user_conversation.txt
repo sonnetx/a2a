@@ -44,3 +44,17 @@ What kind of environment are you hoping for - something more competitive or laid
 Are you thinking about joining a local soccer league, or maybe looking for pickup games in your area? What's your experience level - have you played before or would you be starting fresh? And are you looking for something more recreational and fun, or are you interested in competitive play?
 
 There are usually lots of options depending on what you're looking for!
+2025-08-23T14:50:38.224239|user|I love soccer by the way
+2025-08-23T14:50:38.225397|assistant|I can definitely tell soccer is a real passion of yours - you've mentioned loving it several times! It sounds like it's something you're really excited about. Since you're looking for a sports club and soccer means so much to you, a soccer club seems like it would be a natural fit. 
+
+Are you thinking about joining a recreational league, or maybe looking for something more competitive? And would you prefer playing or are you also interested in other ways to be involved with soccer?
+2025-08-23T14:51:22.236658|user|I want to join a club for around my age. I enjoy the sport and want to have some recreational fun
+2025-08-23T14:51:22.238171|assistant|That's a great goal! Since soccer is clearly your main passion, I'd suggest looking for recreational soccer clubs or leagues in your area. Here are some ways to find age-appropriate options:
+
+- Check with your local recreation center or community center - they often organize adult recreational leagues
+- Look for "social" or "recreational" soccer leagues (as opposed to highly competitive ones)
+- Search online for adult soccer leagues in your city
+- Ask at local sports stores - they often know about community leagues
+- Check apps like Meetup for casual soccer groups
+
+Most recreational leagues are organized by skill level and age ranges, so you can find people at a similar stage who are also playing for fun rather than intense competition. What age range are you in? That might help narrow down the best options to look for.

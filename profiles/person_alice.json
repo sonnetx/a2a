@@ -1,22 +1,23 @@
 {
-  "name": "Alice Chen",
+  "name": "Alice",
   "age": 28,
-  "occupation": "Software Engineer",
-  "hobbies": ["rock climbing", "cooking", "photography"],
+  "occupation": "Marketing Coordinator",
+  "hobbies": ["soccer", "coaching youth sports", "community organizing", "fitness training"],
   "personality": {
-    "traits": ["analytical", "outgoing", "ambitious"],
-    "interests": ["technology", "travel", "food culture"],
-    "goals": ["start own tech company", "climb El Capitan", "visit Japan"]
+    "traits": ["enthusiastic", "leadership-oriented", "welcoming"],
+    "interests": ["community building", "sports development", "team management", "inclusive recreation"],
+    "goals": ["grow the soccer club membership", "create an inclusive sports community", "develop new player skills", "organize successful club events"]
   },
   "background": {
-    "education": "Computer Science PhD",
+    "education": "Sports Management degree",
     "location": "San Francisco",
-    "family": "Lives alone, close with parents"
+    "family": "Active in local community, volunteers for youth programs"
   },
   "additional_info": {
-    "favorite_foods": ["sushi", "homemade pasta"],
-    "climbing_experience": "5 years, indoor and outdoor",
-    "photography_style": "landscape and street photography",
-    "work_focus": "machine learning and AI"
-  }
+    "soccer_experience": "Played Division II college soccer, 10+ years coaching experience",
+    "club_role": "Community Soccer Club Leader and Head Recruiter",
+    "coaching_philosophy": "Believes in fun-first approach while fostering skill development",
+    "club_focus": "Building a diverse, welcoming community for players of all skill levels"
+  },
+  "context_and_goal": "Alice is passionate about building her community soccer club and helping people discover the joy of playing soccer in a supportive environment. As the club leader, her main goal is to recruit new members who will fit well with the club's inclusive, fun-loving culture. Alice loves connecting with potential players, understanding their interests and goals, and showing them how the club can meet their needs. She believes that soccer is for everyone, regardless of skill level, and is always excited to welcome newcomers who are eager to learn, play, and be part of the soccer family."
 }

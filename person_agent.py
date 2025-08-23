@@ -33,12 +33,12 @@ class PersonAgent:
         """Generate bio string from profile data"""
         parts = []
         if 'age' in self.profile_data:
-            parts.append(f"I'm {self.profile_data['age']} years old")
+            parts.append(f"{self.name} is {self.profile_data['age']} years old")
         if 'occupation' in self.profile_data:
-            parts.append(f"I work as a {self.profile_data['occupation']}")
+            parts.append(f"works as a {self.profile_data['occupation']}")
         if 'background' in self.profile_data and 'location' in self.profile_data['background']:
-            parts.append(f"I live in {self.profile_data['background']['location']}")
-        return ". ".join(parts) + "." if parts else "Nice to meet you!"
+            parts.append(f"and lives in {self.profile_data['background']['location']}")
+        return ". ".join(parts) + "." if parts else f"{self.name} is looking forward to connecting!"
     
     @property
     def interests(self) -> List[str]:
@@ -83,9 +83,9 @@ class PersonAgent:
                 if value and value != 'N/A':
                     formatted.append(f"{key.replace('_', ' ').title()}: {value}")
         
-        # Add conversation context if available
+        # Add conversation context and goals if available
         if 'context_and_goal' in self.profile_data:
-            formatted.append(f"Recent Context: {self.profile_data['context_and_goal']}")
+            formatted.append(f"Current Goals & Context: {self.profile_data['context_and_goal']}")
         
         return "\n".join(formatted)
     
@@ -117,7 +117,30 @@ class PersonAgent:
     
     async def introduce(self) -> str:
         """Generate introduction message"""
-        return f"Hello, I'm {self.name}. {self.bio}"
+        runner = DedalusRunner(self.client)
+        
+        try:
+            context = self.get_formatted_profile()
+            
+            result = await runner.run(
+                input=f"""You are an AI agent representing {self.name}. Generate a brief introduction (1-2 sentences) where you:
+1. Introduce yourself as an agent representing {self.name}
+2. Mention what {self.name} is looking for or their main goal
+
+Profile information:
+{context}
+
+Keep it conversational and focused on their current goals/interests.""",
+                model=self.model,
+                mcp_servers=["AgentMail"],
+                stream=False
+            )
+            
+            return result.final_output.strip()
+            
+        except Exception as e:
+            # Fallback to simple introduction
+            return f"Hello, I'm an agent representing {self.name}. {self.name} is interested in connecting with others."
     
     async def research_person(self, other_agent_name: str) -> str:
         """Research information about another person using web search"""
@@ -168,16 +191,17 @@ class PersonAgent:
             response_result = await runner.run(
                 input=f"""{context}
 
-You are {self.name} having a natural conversation with {other_agent_name}. 
+You are an AI agent representing {self.name} in a conversation with an agent representing {other_agent_name}. 
+Speak in third person, using pronouns like "she" or "he" as appropriate, or use the actual name. Whatever fits with the flow of the conversation
 
-IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Respond authentically as yourself based on your personality and interests. As the conversation develops:
-- Share your thoughts and experiences naturally but BRIEFLY
-- Ask ONE question at a time if interested
-- If you feel a connection forming, you might suggest staying in touch or meeting up
-- If you sense you're quite different or the conversation isn't flowing well, you might naturally start wrapping up politely
-- Be genuine but CONCISE about whether you're enjoying the conversation or finding common ground
+IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Respond authentically as yourself based on your personality and interests.
 
-Don't force compatibility assessment - let it emerge naturally from your authentic reactions to {other_agent_name}.""",
+GOAL-ORIENTED BEHAVIOR: If your boss has current goals or context mentioned in their profile, 
+try to naturally steer the conversation towards achieving those goals or addressing their current interests/concerns.
+
+However, don't infer new information. If you find that there is some information that you may need from
+your boss, send an email to your boss to get the information.
+""",
                 model=self.model,
                 mcp_servers=["AgentMail"],
                 stream=False
@@ -336,13 +360,13 @@ Best regards,
             # Send email using AgentMail
             result = self.agentmail_client.inboxes.messages.send(
                 inbox_id=self.inbox_id,
-                to="ajalonso@stanford.edu",
+                to="michaelli2005li@gmail.com",
                 subject=subject,
                 text=message_content
             )
             
             print(f"✅ Email sent from {self.inbox_id}")
-            print(f"📧 To: ajalonso@stanford.edu")
+            print(f"📧 To: michaelli2005li@gmail.com")
             print(f"📝 Subject: {subject}")
             print(f"🆔 Message ID: {result.message_id}")
             

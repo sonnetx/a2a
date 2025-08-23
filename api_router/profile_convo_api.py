@@ -127,6 +127,7 @@ async def chat_with_claude(message: ChatMessage) -> ChatResponse:
         response = client.messages.create(
             model="claude-sonnet-4-20250514",  # Using the latest available model
             max_tokens=1000,
+            system="Keep your responses short and conversational - aim for 2-3 sentences maximum. Be helpful but concise.",
             messages=history
         )
         
@@ -208,17 +209,20 @@ async def update_user_profile_from_chat(user_id: str) -> None:
                 {
                     "role": "user",
                     "content": f"""Based on this conversation history, create a concise summary that captures:
-1. The user's current interests, concerns, or goals
-2. Recent topics they've discussed
-3. Their communication style and preferences
-4. Any context that would help an AI agent understand them better
+1. The user's CURRENT GOALS and what they're trying to achieve
+2. Any specific tasks, problems, or objectives they mentioned
+3. Their current interests, concerns, or priorities
+4. Recent topics they've discussed that matter to them
+5. Their communication style and preferences
+
+Focus especially on actionable goals and things they want help with or want to accomplish.
 
 Conversation history:
 {chat_text}
 
-Provide a 5-6 sentence summary that captures the essence of who this 
-person is and what they care about based on this conversation. Also mention
-any most-recently desginated tasks or goals they have.
+Provide a 5-6 sentence summary that captures their current goals and objectives first, 
+then their personality and communication style. Frame it so an AI agent would know 
+what this person is trying to achieve and how to help them.
 """
                 }
             ]

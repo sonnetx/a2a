@@ -1,33 +1,37 @@
 {
   "name": "Michael",
-  "age": 27,
-  "occupation": "AI Engineer",
+  "age": 20,
+  "occupation": "Software Engineer",
   "hobbies": [
-    "coding",
+    "soccer",
     "basketball",
-    "music"
+    "running",
+    "watching sports"
   ],
   "personality": {
     "traits": [
-      "curious",
-      "analytical",
-      "builder"
+      "sociable",
+      "competitive",
+      "team-oriented"
     ],
     "interests": [
-      "LLMs",
-      "agents",
-      "UX"
+      "team sports",
+      "fitness",
+      "meeting new people",
+      "community activities"
     ],
     "goals": [
-      "ship great AI products",
-      "learn continuously",
-      "help people"
+      "find a fun sports club to join",
+      "improve soccer skills",
+      "make new friends through sports",
+      "stay active and healthy"
     ]
   },
   "background": {
-    "education": "CS",
-    "location": "San Francisco"
+    "education": "Computer Science",
+    "location": "San Francisco",
+    "sports_experience": "Played soccer in college, enjoys pickup basketball games"
   },
-  "context_and_goal": "Based on this conversation, the user is sports-enthusiastic with a particular passion for soccer, which they've emphasized multiple times, and also enjoys basketball. They communicate in a simple, direct style using brief statements to express their interests. The user appears to be exploring their own interests and preferences, having asked \"What are my interests?\" mid-conversation, suggesting some self-reflection or uncertainty about their hobbies. Their most recent goal is finding a sports club to join, which aligns well with their love for both soccer and basketball. They seem like someone who prefers straightforward communication and may benefit from clear, actionable suggestions rather than lengthy explanations when discussing their interests or next steps.",
-  "last_updated": "2025-08-23T14:32:33.981729"
+  "context_and_goal": "**Current Goals & Objectives:** The user is actively seeking to join a recreational soccer club with people around their age. They want to pursue their passion for soccer in a fun, non-competitive social setting and are looking for practical guidance on how to find and connect with appropriate local clubs or leagues.\n\n**Communication Style & Interests:** The user has a simple, direct communication style and tends to repeat topics they're passionate about, particularly soccer, which they've emphasized multiple times as something they love. They also have interests in basketball and food, but soccer is clearly their primary focus right now. They prefer straightforward conversations and seem to appreciate when their enthusiasm is acknowledged, responding well to practical suggestions that align with their stated goals.",
+  "last_updated": "2025-08-23T14:51:27.362781"
 }
