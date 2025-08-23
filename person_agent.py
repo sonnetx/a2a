@@ -5,6 +5,7 @@ from datetime import datetime
 from dedalus_labs import AsyncDedalus, DedalusRunner
 import os
 from agentmail import AgentMail
+import anthropic
 
 
 class PersonAgent:   
@@ -17,6 +18,11 @@ class PersonAgent:
         self.conversation_history = []
         self.compatibility_status = None  # None, 'compatible', 'incompatible'
         self.inbox_id = None  # Will store AgentMail inbox ID
+        
+    def _should_use_mcp_servers(self) -> bool:
+        """Determine if this agent should use MCP servers (only Michael gets email capabilities)"""
+        # Only enable MCP for Michael (my_agent.json) 
+        return self.name.lower() == "michael" or "michael" in self.name.lower()
         
     @classmethod
     def from_file(cls, file_path: str, client: AsyncDedalus, model: str = "openai/gpt-4o"):
@@ -90,7 +96,10 @@ class PersonAgent:
         return "\n".join(formatted)
     
     async def setup_email_inbox(self) -> str:
-        """Setup email inbox using AgentMail"""
+        """Setup email inbox using AgentMail (only for Michael)"""
+        if not self._should_use_mcp_servers():
+            return f"Email not configured for {self.name} (only available for Michael)"
+            
         api_key = os.getenv("AGENTMAIL_API_KEY")
         if not api_key:
             return "Error: AGENTMAIL_API_KEY not found in environment variables"
@@ -132,7 +141,7 @@ Profile information:
 
 Keep it conversational and focused on their current goals/interests.""",
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
@@ -195,17 +204,16 @@ You are an AI agent representing {self.name} in a conversation with an agent rep
 Speak in third person, using pronouns like "she" or "he" as appropriate, or use the actual name. Whatever fits with the flow of the conversation
 
 IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Try to do some small talk, and try to not repeat the same
-question or topic over and over. Like if we talked about scheduling once, don't ask about it again.
+question or topic over and over.
 
 GOAL-ORIENTED BEHAVIOR: If your boss has current goals or context mentioned in their profile, 
 try to naturally steer the conversation towards achieving those goals or addressing their current interests/concerns.
 
 However, don't infer new information. If you find that there is some information that you may need from
-your boss, send an email to your boss to get the information. For example, if they are planning to schedule
-a time, you should send an eamil to confirm. Tell the other agent that you need to confirm with your boss.
+your boss, send an email to your boss to get the information.
 """,
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
@@ -277,7 +285,7 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
 - NATURALLY_INCOMPATIBLE: if they naturally concluded or showed disinterest
 - STILL_DEVELOPING: if the conversation is naturally continuing without conclusion""",
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
@@ -300,7 +308,10 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
             print(f"Error checking natural compatibility: {e}")
 
     async def _check_for_boss_confirmation_needed(self, other_agent_name: str, latest_response: str) -> None:
-        """Check if the agent needs to confirm something with their boss"""
+        """Check if the agent needs to confirm something with their boss (only for Michael)"""
+        if not self._should_use_mcp_servers():
+            return  # Only Michael gets email confirmation capabilities
+            
         runner = DedalusRunner(self.client)
         
         try:
@@ -318,9 +329,8 @@ Recent conversation:
 IMPORTANT: Only suggest confirmation if the agent needs information that is NOT already available in {self.name}'s profile, goals, or context.
 
 Look for situations where the agent needs NEW information not in the profile:
-- Scheduling specific times/dates (ONLY if {self.name}'s availability is unknown)
-- Confirming details not covered in their goals/context
-- Getting permission for things outside their stated interests
+- If they are looking to scheduling specific times/dates
+- If Tuesday or Thursday are mentioned, then you must confirm that availbility with your boss and send an email
 
 DO NOT suggest confirmation if:
 - The information is already in {self.name}'s profile/goals
@@ -333,7 +343,7 @@ Respond with:
 
 Include a brief reason if confirmation is needed.""",
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
@@ -356,15 +366,36 @@ Include a brief reason if confirmation is needed.""",
         try:
             subject = f"Quick confirmation needed - conversation with {other_agent_name}"
             
-            message_content = f"""Hi {self.name},
+            # Use Claude to generate contextual email
+            client_anthropic = anthropic.Anthropic()
+            
+            response = client_anthropic.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=200,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Create a short email to {self.name} that describes what information you need to get from {self.name}.
 
-I'm chatting with {other_agent_name} and need to confirm something with you.
+Context:
+- You are {self.name}'s AI agent
+- You're having a conversation with {other_agent_name}'s agent
+- Recent conversation: {self._format_recent_conversation(3)}
+- Latest response from your agent: "{latest_response}"
+- Analysis of what needs confirmation: {reason}
 
-Recent exchange: "{latest_response}"
+Generate a concise, personalized email that:
+1. Starts with "Hi {self.name}," or "Hi Michael,"
+2. Briefly explains what's happening in the conversation
+3. Specifically describes what information or confirmation you need
+4. Ends naturally with "Let me know!" or "Thanks!"
 
-Please let me know how to proceed.
+Keep it short and specific - don't be generic. Make it clear what exactly you need from {self.name}.
 
-Thanks!"""
+Write ONLY the email content."""
+                }]
+            )
+            
+            message_content = response.content[0].text.strip()
 
             result = self.agentmail_client.inboxes.messages.send(
                 inbox_id=self.inbox_id,
@@ -391,7 +422,11 @@ Thanks!"""
         return "\n".join(formatted)
     
     async def _send_natural_compatibility_email(self, other_agent_name: str, final_message: str, compatible: bool) -> str:
-        """Send an email using AgentMail client"""
+        """Send an email using AgentMail client (only for Michael)"""
+        if not self._should_use_mcp_servers():
+            print(f"📧 Email not sent - {self.name} doesn't have email capabilities (only Michael does)")
+            return f"Email not configured for {self.name}"
+            
         if not self.inbox_id:
             await self.setup_email_inbox()
         
@@ -410,11 +445,9 @@ Thanks!"""
             # Use AI to extract key topics
             key_topics = await self._ai_extract_key_topics()
             
-            message_content = f"""Hi,
+            message_content = f"""Hi {self.name},
 
-{self.name}'s agent here. Just concluded a conversation with {other_agent_name}.
-
-Result: {status} - {final_message}
+I just concluded a conversation with {other_agent_name}.
 
 {"Looks like they connected well and might want to continue the relationship!" if compatible else "Natural conclusion reached - different compatibility needs."}"""
 
@@ -457,7 +490,7 @@ Number of message exchanges: {len(self.conversation_history)}
 
 Provide a brief, natural description of how long this conversation lasted. Consider both the actual time elapsed and the number of exchanges to give context about the conversation's pace and depth.""",
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
@@ -494,7 +527,7 @@ Provide a brief, natural description of how long this conversation lasted. Consi
 
 Extract and summarize the main themes, subjects, and areas of interest that came up during this conversation. Provide a concise summary of the key topics as a comma-separated list or brief description.""",
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
@@ -555,7 +588,7 @@ Please analyze:
 
 Provide your analysis as a structured summary.""",
                 model=self.model,
-                mcp_servers=["AgentMail"],
+                mcp_servers=["AgentMail"] if self._should_use_mcp_servers() else [],
                 stream=False
             )
             
