@@ -7,8 +7,6 @@ import numpy as np
 from person_agent import PersonAgent
 from personality_tracker import PersonalityTracker
 from compatibility import CompatibilityScorer
-from dedalus_labs import AsyncDedalus
-
 
 class ConversationHistory:
     """Manages conversation history and provides context"""
