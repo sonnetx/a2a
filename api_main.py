@@ -539,6 +539,8 @@ async def run_conversation_background(
         
         # Create user agent from session profile
         user_profile = user_sessions[session_id]["profile"]
+        print(f"🔍 Creating user agent with profile: {json.dumps(user_profile, indent=2)}")
+        
         user_agent = PersonAgent(
             name=user_profile["name"],
             profile_data=user_profile,
@@ -560,6 +562,9 @@ async def run_conversation_background(
         active_conversations[conversation_id] = conv_manager
         
         # Send conversation start notification
+        print(f"\n🎬 STARTING CONVERSATION: {user_agent.name} ↔ {target_agent.name}")
+        print("=" * 60)
+        
         await send_conversation_update(session_id, {
             "conversation_id": conversation_id,
             "speaker": "system",
@@ -608,6 +613,8 @@ async def run_conversation_with_streaming(
         introduction = await conv_manager.agent1.introduce()
         conv_manager.conversation_history.add_message(conv_manager.agent1.name, introduction)
         
+        print(f"\n💬 {conv_manager.agent1.name}: {introduction}")
+        
         await send_conversation_update(session_id, {
             "conversation_id": conv_manager.conversation_id,
             "speaker": conv_manager.agent1.name,
@@ -628,6 +635,9 @@ async def run_conversation_with_streaming(
             # Generate response
             response = await current_speaker.respond_to(other_speaker.name, last_message)
             conv_manager.conversation_history.add_message(current_speaker.name, response)
+            
+            # Log conversation to terminal
+            print(f"💬 {current_speaker.name}: {response}")
             
             # Update observations
             conv_manager._update_observations(current_speaker, response)
@@ -699,6 +709,12 @@ Conversation ended! Final compatibility analysis:
 • Status: {results.get('overall_status', 'Unknown')}
 • Total turns: {turn + 1}
 """
+        
+        print(f"\n🏁 CONVERSATION ENDED")
+        print("=" * 60)
+        print(f"🎯 Final Compatibility: {final_compatibility:.3f} ({results.get('overall_status', 'Unknown')})")
+        print(f"📊 Total Turns: {turn + 1}")
+        print("=" * 60)
         
         await send_conversation_update(session_id, {
             "conversation_id": conv_manager.conversation_id,

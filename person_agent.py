@@ -200,10 +200,11 @@ class PersonAgent:
             return response
             
         except Exception as e:
-            print(f"Error in respond_to for {self.name}: {str(e)}")
-            fallback_response = f"Hi {other_agent_name}, I'm {self.name}. I work as a {self.profile_data.get('occupation', 'professional')} and enjoy {', '.join(self.interests[:2]) if self.interests else 'various activities'}. What about you?"
-            
-            # Add fallback to history
+            print(f"❌ ERROR in {self.name}.respond_to(): {e}")
+            print(f"   Model: {self.model}")
+            print(f"   Context length: {len(context) if context else 'None'}")
+            print(f"   Other agent: {other_agent_name}")
+            fallback_response = f"I'm sorry, I'm having trouble responding right now. Could you tell me more about yourself?"
             self.conversation_history.append({
                 "speaker": self.name, 
                 "message": fallback_response,
