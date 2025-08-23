@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bot, Users, Orbit, Network } from 'lucide-react'
+import { Bot, Orbit, Network } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface TabNavigationProps {
@@ -14,12 +14,6 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
       label: 'AI Chatbot',
       icon: Bot,
       description: 'Chat with AI assistant'
-    },
-    {
-      id: 'agents',
-      label: 'Agent Interaction',
-      icon: Users,
-      description: 'Watch AI agents converse'
     },
     {
       id: 'agent-animation',
