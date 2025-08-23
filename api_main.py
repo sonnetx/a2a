@@ -12,8 +12,6 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
@@ -22,7 +20,6 @@ from dotenv import load_dotenv
 from dedalus_labs import AsyncDedalus
 from person_agent import PersonAgent
 from conversation_manager import ConversationManager
-from personality_tracker import PersonalityTracker
 from api_router.profile_convo_api import chat_with_claude, get_conversation_history, clear_conversation_history, ChatMessage
 
 # Note: Make sure compatibility.py exists with CompatibilityScorer class

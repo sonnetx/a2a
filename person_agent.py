@@ -3,6 +3,8 @@ import asyncio
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from dedalus_labs import AsyncDedalus, DedalusRunner
+import os
+from agentmail import AgentMail
 
 
 class PersonAgent:
@@ -86,18 +88,34 @@ class PersonAgent:
         return "\n".join(formatted)
     
     async def setup_email_inbox(self) -> str:
-        """Note: AgentMail MCP server doesn't have create_inbox tool, so we'll handle this differently"""
-        # The AgentMail MCP server only has: get_message, send_message, reply_to_message
-        # We'll assume an inbox/email is provided or available through the API configuration
+        """Setup email inbox using AgentMail client directly"""
+        # Get API key from environment
+        api_key = os.getenv("AGENTMAIL_API_KEY")
+        if not api_key:
+            return "Error: AGENTMAIL_API_KEY not found in environment variables"
+        
+        # Initialize AgentMail client
+        self.agentmail_client = AgentMail(api_key=api_key)
         
         if self.inbox_id:
             return f"Using existing email setup for {self.name}"
-            
-        # For now, we'll use a placeholder that indicates the email is handled by AgentMail's backend
-        self.inbox_id = f"{self.name.lower().replace(' ', '_')}_agent"
         
-        print(f"✉️ {self.name} configured for AgentMail (inbox managed by AgentMail backend)")
-        return f"AgentMail email configured for {self.name}"
+        # Get existing inboxes (more reliable than creating new ones)
+        try:
+            response = self.agentmail_client.inboxes.list()
+            if len(response.inboxes) == 0:
+                print("❌ No existing inboxes found")
+                return "Error: No existing inboxes found"
+            
+            # Use first available inbox
+            inbox = response.inboxes[0]
+            self.inbox_id = inbox.inbox_id
+            
+            print(f"✉️ {self.name} configured for AgentMail using inbox: {self.inbox_id}")
+            return f"AgentMail email configured for {self.name}"
+        except Exception as e:
+            print(f"❌ Error setting up AgentMail: {e}")
+            return f"Error setting up AgentMail: {e}"
     
     async def introduce(self) -> str:
         """Generate introduction message"""
@@ -139,6 +157,10 @@ class PersonAgent:
             "timestamp": datetime.now().isoformat()
         })
         
+        # Only keep the last 10 messages to avoid context overflow
+        if len(self.conversation_history) > 20:
+            self.conversation_history = self.conversation_history[-20:]
+        
         context = self._build_response_context(other_agent_name)
         
         runner = DedalusRunner(self.client)
@@ -148,16 +170,16 @@ class PersonAgent:
             response_result = await runner.run(
                 input=f"""{context}
 
-You are {self.name} having a natural conversation with {other_agent_name}. 
+    You are {self.name} having a natural conversation with {other_agent_name}. 
 
-Respond authentically as yourself based on your personality and interests. As the conversation develops:
-- Share your thoughts and experiences naturally
-- Ask questions about things that genuinely interest you
-- If you feel a connection forming, you might suggest staying in touch or meeting up
-- If you sense you're quite different or the conversation isn't flowing well, you might naturally start wrapping up politely
-- Be genuine about whether you're enjoying the conversation or finding common ground
+    Respond authentically as yourself based on your personality and interests. As the conversation develops:
+    - Share your thoughts and experiences naturally
+    - Ask questions about things that genuinely interest you
+    - If you feel a connection forming, you might suggest staying in touch or meeting up
+    - If you sense you're quite different or the conversation isn't flowing well, you might naturally start wrapping up politely
+    - Be genuine about whether you're enjoying the conversation or finding common ground
 
-Don't force compatibility assessment - let it emerge naturally from your authentic reactions to {other_agent_name}.""",
+    Don't force compatibility assessment - let it emerge naturally from your authentic reactions to {other_agent_name}.""",
                 model=self.model,
                 stream=False
             )
@@ -178,12 +200,16 @@ Don't force compatibility assessment - let it emerge naturally from your authent
             return response
             
         except Exception as e:
-            fallback_response = f"I'm sorry, I'm having trouble responding right now. Could you tell me more about yourself?"
+            print(f"Error in respond_to for {self.name}: {str(e)}")
+            fallback_response = f"Hi {other_agent_name}, I'm {self.name}. I work as a {self.profile_data.get('occupation', 'professional')} and enjoy {', '.join(self.interests[:2]) if self.interests else 'various activities'}. What about you?"
+            
+            # Add fallback to history
             self.conversation_history.append({
                 "speaker": self.name, 
                 "message": fallback_response,
                 "timestamp": datetime.now().isoformat()
             })
+            
             return fallback_response
     
     async def _check_natural_compatibility_conclusion(self, other_agent_name: str, latest_response: str) -> None:
@@ -260,65 +286,67 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
         return "\n".join(formatted)
     
     async def _send_natural_compatibility_email(self, other_agent_name: str, final_message: str, compatible: bool) -> str:
-        """Send an email using AgentMail's send_message tool"""
+        """Send an email using AgentMail client directly"""
         if not self.inbox_id:
             await self.setup_email_inbox()
         
-        runner = DedalusRunner(self.client)
+        if not hasattr(self, 'agentmail_client'):
+            return "Error: AgentMail client not initialized"
         
         status = "Compatible" if compatible else "Incompatible"
         emoji = "💚" if compatible else "💔"
         
         try:
-            result = await runner.run(
-                input=f"""Use the AgentMail send_message tool to send an email with these details:
+            # Build email content
+            subject = f"{emoji} Natural Compatibility Assessment: {self.name} & {other_agent_name}"
+            
+            message_content = f"""Hi there,
 
-To: admin@example.com
-Subject: {emoji} Natural Compatibility Assessment: {self.name} & {other_agent_name}
+    This is an automated report from the AI agent compatibility system.
 
-Message content:
----
-Hi there,
+    **Assessment Summary:**
+    - Agents: {self.name} ↔ {other_agent_name}
+    - Natural Conclusion: {status}
+    - Assessment Method: Organic conversation analysis
 
-This is an automated report from the AI agent compatibility system.
+    **How it happened:**
+    {self.name} naturally reached this conclusion during conversation. The final message that indicated compatibility was:
+    "{final_message}"
 
-**Assessment Summary:**
-- Agents: {self.name} ↔ {other_agent_name}
-- Natural Conclusion: {status}
-- Assessment Method: Organic conversation analysis
+    **Conversation Insights:**
+    - Duration: {self._get_conversation_duration()}
+    - Total exchanges: {len(self.conversation_history)}
+    - Key topics: {self._get_key_topics()}
+    - Flow: Natural and authentic
 
-**How it happened:**
-{self.name} naturally reached this conclusion during conversation. The final message that indicated compatibility was:
-"{final_message}"
+    **What this means:**
+    {"Both agents showed genuine interest in continuing their connection. This suggests strong compatibility for future interactions." if compatible else "The agents naturally concluded their interaction, suggesting different compatibility needs. This is a healthy outcome."}
 
-**Conversation Insights:**
-- Duration: {self._get_conversation_duration()}
-- Total exchanges: {len(self.conversation_history)}
-- Key topics: {self._get_key_topics()}
-- Flow: Natural and authentic
+    **Recent Conversation:**
+    {self._format_recent_conversation(8)}
 
-**What this means:**
-{"Both agents showed genuine interest in continuing their connection. This suggests strong compatibility for future interactions." if compatible else "The agents naturally concluded their interaction, suggesting different compatibility needs. This is a healthy outcome."}
+    Best regards,
+    {self.name} (AI Agent)"""
 
-**Recent Conversation:**
-{self._format_recent_conversation(8)}
-
-Best regards,
-{self.name} (AI Agent)
----
-
-Please use the send_message tool from AgentMail to send this email now.""",
-                model=self.model,
-                mcp_servers=["AgentMail"],
-                stream=False
+            # Send email directly using AgentMail client
+            result = self.agentmail_client.inboxes.messages.send(
+                inbox_id=self.inbox_id,
+                to="ajalonso@stanford.edu",
+                subject=subject,
+                text=message_content
             )
             
-            print(f"📧 {self.name} sent compatibility email about {other_agent_name} ({status})")
-            return result.final_output
+            print(f"✅ Email sent from {self.inbox_id}")
+            print(f"📧 To: admin@example.com")
+            print(f"📝 Subject: {subject}")
+            print(f"🆔 Message ID: {result.message_id}")
+            
+            return f"Email sent successfully with message ID: {result.message_id}"
+            
         except Exception as e:
-            error_msg = f"Failed to send natural compatibility email: {e}"
-            print(f"❌ {error_msg}")
-            return error_msg
+            print(f"❌ Error sending email: {e}")
+            return f"Error sending email: {e}"
+
     
     def _build_response_context(self, other_agent_name: str) -> str:
         """Build context string for response generation"""

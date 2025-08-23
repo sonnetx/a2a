@@ -15,7 +15,7 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your AI assistant. How can I help you today?',
+      text: 'Hello! I\'m your AI assistant. Please chat with me to create your profile.',
       isUser: false,
       timestamp: new Date()
     }
