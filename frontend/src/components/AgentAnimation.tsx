@@ -62,6 +62,13 @@ function AgentAvatar({ id, name, color = '#6EE7B7', emoji = '🤖', position, is
       group.current.rotation.y = tilt
     }
   })
+
+  // Bubble sizing tuned for a wide horizontal rectangle
+  const messageLength = currentMessage ? currentMessage.length : 0
+  const bubbleWidth = Math.min(messageLength * 0.06 + 1.6, 5.8)
+  const bubbleHeight = 1.05
+  const textMaxWidth = Math.max(bubbleWidth - 0.35, 1.2)
+  const tailY = -bubbleHeight / 2 - 0.08
   return (
     <group ref={group} position={position}>
       <mesh castShadow receiveShadow>
@@ -85,29 +92,43 @@ function AgentAvatar({ id, name, color = '#6EE7B7', emoji = '🤖', position, is
       {currentMessage && (
         <Billboard position={[0, 1.8, 0]}>
           <group>
-            {/* Bubble Background */}
-            <mesh position={[0, 0, -0.01]}>
-              <planeGeometry args={[Math.min(currentMessage.length * 0.08 + 1, 6), 1]} />
-              <meshBasicMaterial color="white" opacity={0.95} transparent />
+            {/* Shadow */}
+            <mesh position={[0.05, -0.05, -0.03]}>
+              <planeGeometry args={[bubbleWidth + 0.2, bubbleHeight + 0.2]} />
+              <meshBasicMaterial color="#000000" opacity={0.08} transparent />
             </mesh>
-            
-            {/* Bubble Border */}
+
+            {/* Border */}
             <mesh position={[0, 0, -0.005]}>
-              <planeGeometry args={[Math.min(currentMessage.length * 0.08 + 1.1, 6.1), 1.1]} />
-              <meshBasicMaterial color="#cccccc" opacity={0.8} transparent />
+              <planeGeometry args={[bubbleWidth + 0.08, bubbleHeight + 0.08]} />
+              <meshBasicMaterial color="#e6ebf0" opacity={0.9} transparent />
+            </mesh>
+
+            {/* Background */}
+            <mesh position={[0, 0, -0.01]}
+                  scale={[1, 1, 1]}
+            >
+              <planeGeometry args={[bubbleWidth, bubbleHeight]} />
+              <meshBasicMaterial color="#ffffff" opacity={0.98} transparent />
+            </mesh>
+
+            {/* Tail */}
+            <mesh position={[0, tailY, -0.01]}>
+              <coneGeometry args={[0.08, 0.18, 3]} />
+              <meshBasicMaterial color="#ffffff" opacity={0.98} transparent />
             </mesh>
             
             {/* Text */}
-            <Text 
-              fontSize={0.15} 
-              maxWidth={5.5} 
-              lineHeight={1.2} 
-              color="#333333" 
-              anchorX="center" 
+            <Text
+              fontSize={0.14}
+              maxWidth={textMaxWidth}
+              lineHeight={1.28}
+              color="#1e293b"
+              anchorX="center"
               anchorY="middle"
               textAlign="center"
             >
-              {currentMessage.length > 200 ? currentMessage.substring(0, 200) + '...' : currentMessage}
+              {currentMessage.length > 220 ? currentMessage.substring(0, 220) + '...' : currentMessage}
             </Text>
           </group>
         </Billboard>
@@ -227,13 +248,16 @@ function ConversationControls({
   // Hide controls during conversation
   if (isRunning) {
     return (
-      <Html position={[0, -2, 0]} center style={{ width: 400 }}>
-        <div className="pointer-events-auto select-none rounded-2xl bg-black/80 shadow-xl border border-gray-600 p-3 backdrop-blur">
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-white text-sm">Conversation in progress...</span>
+      <Html position={[0, -2, 0]} center style={{ width: 420 }}>
+        <div className="pointer-events-auto select-none rounded-2xl bg-gradient-to-r from-slate-900/95 to-slate-800/95 shadow-2xl border border-slate-600/50 p-4 backdrop-blur-md">
+          <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-white text-sm font-medium">Live Conversation</span>
+            </div>
             <button
               onClick={stopConversation}
-              className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 text-sm font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               ⏹️ Stop
             </button>
@@ -244,30 +268,32 @@ function ConversationControls({
   }
 
   return (
-    <Html position={[0, -2, 0]} center style={{ width: 600 }}>
-      <div className="pointer-events-auto select-none rounded-2xl bg-white/90 shadow-xl border border-gray-200 p-4 backdrop-blur">
+    <Html position={[0, -2, 0]} center style={{ width: 640 }}>
+      <div className="pointer-events-auto select-none rounded-2xl bg-gradient-to-br from-white/95 to-slate-50/95 shadow-2xl border border-slate-200/80 p-6 backdrop-blur-md">
         {/* Connection Status */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Live Agent Conversation</h3>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            connectionStatus === 'connected' ? 'bg-green-100 text-green-700' :
-            connectionStatus === 'connecting' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-red-100 text-red-700'
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            Live Agent Conversation
+          </h3>
+          <span className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
+            connectionStatus === 'connected' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+            connectionStatus === 'connecting' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+            'bg-red-100 text-red-700 border border-red-200'
           }`}>
             {connectionStatus}
           </span>
         </div>
 
         {/* Profile Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-3">
             Select Conversation Partner:
           </label>
           <select
             value={selectedProfile}
             onChange={(e) => setSelectedProfile(e.target.value)}
             disabled={isRunning}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 bg-white shadow-sm text-slate-700 font-medium transition-all duration-200"
           >
             <option value="">Choose a profile...</option>
             {profileOptions.map(profile => (
@@ -279,19 +305,19 @@ function ConversationControls({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-4">
           {!isRunning ? (
             <button
               onClick={startConversation}
               disabled={!selectedProfile || connectionStatus !== 'connected'}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed flex items-center gap-2 font-semibold shadow-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100"
             >
               ▶️ Start Conversation
             </button>
           ) : (
             <button
               onClick={stopConversation}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 flex items-center gap-2 font-semibold shadow-lg transition-all duration-200 transform hover:scale-105"
             >
               ⏹️ Stop
             </button>
@@ -299,7 +325,7 @@ function ConversationControls({
           
           <button
             onClick={resetConversation}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            className="px-5 py-3 bg-gradient-to-r from-slate-600 to-slate-700 text-white rounded-xl hover:from-slate-700 hover:to-slate-800 font-medium shadow-lg transition-all duration-200 transform hover:scale-105"
           >
             🔄 Reset
           </button>
@@ -549,7 +575,7 @@ export default function AgentAnimation() {
       }
       
       setAgents(prev => [
-        { ...prev[0], isActive: true }, // Activate user
+        { ...prev[0], isActive: true, name: 'Animation User' }, // Activate user and set correct name
         newAgent
       ])
     }
