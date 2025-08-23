@@ -1,0 +1,709 @@
+#!/usr/bin/env python3
+"""
+FastAPI backend for conversation simulation platform.
+"""
+
+import asyncio
+import json
+import uuid
+import logging
+from datetime import datetime
+from typing import Dict, List, Optional, Any
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+import uvicorn
+from dotenv import load_dotenv
+
+from dedalus_labs import AsyncDedalus
+from person_agent import PersonAgent
+from conversation_manager import ConversationManager
+from personality_tracker import PersonalityTracker
+
+# Note: Make sure compatibility.py exists with CompatibilityScorer class
+# or import it from wherever it's defined in your existing codebase
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="Conversation Simulation API", version="1.0.0")
+
+# Global state
+active_connections: Dict[str, WebSocket] = {}
+user_sessions: Dict[str, Dict] = {}
+predefined_profiles: Dict[str, Dict] = {}
+active_conversations: Dict[str, ConversationManager] = {}
+
+
+# ===== Models =====
+
+class UserMessage(BaseModel):
+    message: str
+    session_id: str
+
+
+class UserProfile(BaseModel):
+    name: str
+    age: Optional[int] = None
+    occupation: Optional[str] = None
+    hobbies: List[str] = []
+    personality_traits: List[str] = []
+    interests: List[str] = []
+    goals: List[str] = []
+    location: Optional[str] = None
+    education: Optional[str] = None
+
+
+class ConversationRequest(BaseModel):
+    session_id: str
+    target_profile_id: str
+    max_turns: int = 8
+    enable_research: bool = False
+
+
+class ChatResponse(BaseModel):
+    message: str
+    message_type: str  # 'bot', 'user', 'system'
+    timestamp: str
+    session_id: str
+
+
+class ConversationUpdate(BaseModel):
+    conversation_id: str
+    speaker: str
+    message: str
+    compatibility_scores: Optional[Dict[str, float]] = None
+    turn_number: int
+    is_finished: bool = False
+
+
+# ===== Startup and Profile Management =====
+
+@app.on_event("startup")
+async def startup_event():
+    """Load predefined profiles on startup"""
+    await load_predefined_profiles()
+
+
+async def load_predefined_profiles():
+    """Load predefined profiles from profiles directory"""
+    global predefined_profiles
+    profiles_dir = Path("profiles")
+    
+    if not profiles_dir.exists():
+        profiles_dir.mkdir()
+        # Create some example profiles
+        await create_example_profiles(profiles_dir)
+    
+    for profile_file in profiles_dir.glob("*.json"):
+        try:
+            with open(profile_file, 'r', encoding='utf-8') as f:
+                profile_data = json.load(f)
+                profile_id = profile_file.stem
+                predefined_profiles[profile_id] = profile_data
+                logger.info(f"Loaded profile: {profile_data.get('name', profile_id)}")
+        except Exception as e:
+            logger.error(f"Error loading profile {profile_file}: {e}")
+
+
+async def create_example_profiles(profiles_dir: Path):
+    """Create example profiles if none exist"""
+    example_profiles = {
+        "alice_tech": {
+            "name": "Alice Chen",
+            "age": 28,
+            "occupation": "Software Engineer",
+            "hobbies": ["rock climbing", "photography", "cooking"],
+            "personality": {
+                "traits": ["adventurous", "creative", "analytical"],
+                "interests": ["technology", "outdoor activities", "art"],
+                "goals": ["start a tech company", "travel to Japan", "learn guitar"]
+            },
+            "background": {
+                "education": "Computer Science BS",
+                "location": "San Francisco",
+                "family": "Single, close to siblings"
+            }
+        },
+        "bob_marketing": {
+            "name": "Bob Smith",
+            "age": 32,
+            "occupation": "Marketing Manager",
+            "hobbies": ["running", "coffee brewing", "reading"],
+            "personality": {
+                "traits": ["social", "organized", "curious"],
+                "interests": ["business", "fitness", "literature"],
+                "goals": ["run a marathon", "write a book", "learn Spanish"]
+            },
+            "background": {
+                "education": "Marketing MBA",
+                "location": "Austin",
+                "family": "Married, two kids"
+            }
+        },
+        "sarah_artist": {
+            "name": "Sarah Wilson",
+            "age": 26,
+            "occupation": "Graphic Designer",
+            "hobbies": ["painting", "yoga", "gardening"],
+            "personality": {
+                "traits": ["creative", "empathetic", "introspective"],
+                "interests": ["art", "wellness", "nature"],
+                "goals": ["open art studio", "learn meditation", "travel to India"]
+            },
+            "background": {
+                "education": "Fine Arts BFA",
+                "location": "Portland",
+                "family": "Single, close to parents"
+            }
+        }
+    }
+    
+    for profile_id, profile_data in example_profiles.items():
+        profile_file = profiles_dir / f"{profile_id}.json"
+        with open(profile_file, 'w', encoding='utf-8') as f:
+            json.dump(profile_data, f, indent=2)
+
+
+# ===== WebSocket Connection Management =====
+
+@app.websocket("/ws/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    active_connections[session_id] = websocket
+    
+    # Initialize session if it doesn't exist
+    if session_id not in user_sessions:
+        user_sessions[session_id] = {
+            "profile": None,
+            "chat_history": [],
+            "profile_building_stage": "initial",
+            "created_at": datetime.now().isoformat()
+        }
+    
+    try:
+        # Send welcome message
+        await send_message_to_session(session_id, {
+            "message": "Hello! I'm here to help you create your profile and then watch you chat with other personalities. What's your name?",
+            "message_type": "bot",
+            "timestamp": datetime.now().isoformat(),
+            "session_id": session_id
+        })
+        
+        while True:
+            data = await websocket.receive_json()
+            await handle_chat_message(session_id, data.get("message", ""))
+            
+    except WebSocketDisconnect:
+        logger.info(f"Client {session_id} disconnected")
+        if session_id in active_connections:
+            del active_connections[session_id]
+
+
+async def send_message_to_session(session_id: str, message_data: Dict):
+    """Send message to specific session"""
+    if session_id in active_connections:
+        try:
+            await active_connections[session_id].send_json(message_data)
+        except Exception as e:
+            logger.error(f"Error sending message to {session_id}: {e}")
+
+
+# ===== Chat Handler =====
+
+class ProfileBuilder:
+    """Handles the profile building conversation flow"""
+    
+    def __init__(self):
+        self.stages = [
+            "initial",      # Get name
+            "age",          # Get age
+            "occupation",   # Get occupation
+            "hobbies",      # Get hobbies
+            "personality",  # Get personality traits
+            "goals",        # Get goals
+            "location",     # Get location
+            "complete"      # Profile complete
+        ]
+    
+    async def process_message(self, session_id: str, message: str) -> str:
+        """Process user message and return bot response"""
+        session = user_sessions[session_id]
+        stage = session.get("profile_building_stage", "initial")
+        
+        if stage == "initial":
+            return await self._handle_name(session_id, message)
+        elif stage == "age":
+            return await self._handle_age(session_id, message)
+        elif stage == "occupation":
+            return await self._handle_occupation(session_id, message)
+        elif stage == "hobbies":
+            return await self._handle_hobbies(session_id, message)
+        elif stage == "personality":
+            return await self._handle_personality(session_id, message)
+        elif stage == "goals":
+            return await self._handle_goals(session_id, message)
+        elif stage == "location":
+            return await self._handle_location(session_id, message)
+        elif stage == "complete":
+            return await self._handle_general_chat(session_id, message)
+        
+        return "I'm not sure how to help with that. Let's continue building your profile!"
+    
+    async def _handle_name(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        if not session["profile"]:
+            session["profile"] = {}
+        
+        session["profile"]["name"] = message.strip()
+        session["profile_building_stage"] = "age"
+        return f"Nice to meet you, {message.strip()}! How old are you?"
+    
+    async def _handle_age(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        try:
+            age = int(message.strip())
+            session["profile"]["age"] = age
+            session["profile_building_stage"] = "occupation"
+            return "Great! What's your occupation or what do you do for work?"
+        except ValueError:
+            return "Please enter a valid age (just the number)."
+    
+    async def _handle_occupation(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        session["profile"]["occupation"] = message.strip()
+        session["profile_building_stage"] = "hobbies"
+        return "Interesting! What are your hobbies or interests? (You can list several, separated by commas)"
+    
+    async def _handle_hobbies(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        hobbies = [h.strip() for h in message.split(",") if h.strip()]
+        session["profile"]["hobbies"] = hobbies
+        session["profile_building_stage"] = "personality"
+        return "Cool hobbies! How would you describe your personality? (e.g., creative, analytical, social, adventurous)"
+    
+    async def _handle_personality(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        traits = [t.strip() for t in message.split(",") if t.strip()]
+        if not session["profile"].get("personality"):
+            session["profile"]["personality"] = {}
+        session["profile"]["personality"]["traits"] = traits
+        session["profile_building_stage"] = "goals"
+        return "Perfect! What are some of your goals or aspirations? (separate multiple goals with commas)"
+    
+    async def _handle_goals(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        goals = [g.strip() for g in message.split(",") if g.strip()]
+        session["profile"]["personality"]["goals"] = goals
+        session["profile_building_stage"] = "location"
+        return "Awesome goals! Where are you located (city/state or country)?"
+    
+    async def _handle_location(self, session_id: str, message: str) -> str:
+        session = user_sessions[session_id]
+        if not session["profile"].get("background"):
+            session["profile"]["background"] = {}
+        session["profile"]["background"]["location"] = message.strip()
+        session["profile_building_stage"] = "complete"
+        
+        # Format the complete profile
+        profile = session["profile"]
+        summary = f"""
+Perfect! Your profile is complete:
+
+**Name:** {profile.get('name', 'N/A')}
+**Age:** {profile.get('age', 'N/A')}
+**Occupation:** {profile.get('occupation', 'N/A')}
+**Location:** {profile.get('background', {}).get('location', 'N/A')}
+**Hobbies:** {', '.join(profile.get('hobbies', []))}
+**Personality:** {', '.join(profile.get('personality', {}).get('traits', []))}
+**Goals:** {', '.join(profile.get('personality', {}).get('goals', []))}
+
+Now you can start conversations with other personalities! Type 'start conversation' to see available profiles, or just chat with me about anything.
+"""
+        return summary
+    
+    async def _handle_general_chat(self, session_id: str, message: str) -> str:
+        """Handle general chat after profile is complete"""
+        message_lower = message.lower().strip()
+        
+        if "start conversation" in message_lower or "available profiles" in message_lower:
+            profiles_list = []
+            for profile_id, profile_data in predefined_profiles.items():
+                name = profile_data.get('name', profile_id)
+                occupation = profile_data.get('occupation', 'Unknown')
+                profiles_list.append(f"• **{name}** ({occupation}) - ID: `{profile_id}`")
+            
+            profiles_text = "\n".join(profiles_list)
+            return f"""Here are the available personalities you can chat with:
+
+{profiles_text}
+
+To start a conversation, use the bot control panel on the right side of the screen, or tell me which profile you'd like to chat with!"""
+        
+        # Simple responses for general chat
+        responses = [
+            "That's interesting! Feel free to start a conversation with one of our personalities.",
+            "I'd love to hear more! You can also begin chatting with other profiles whenever you're ready.",
+            "Thanks for sharing! Ready to see how you'd get along with our other personalities?",
+            "That sounds great! Want to try a conversation with one of our available profiles?"
+        ]
+        
+        import random
+        return random.choice(responses)
+
+
+profile_builder = ProfileBuilder()
+
+
+async def handle_chat_message(session_id: str, message: str):
+    """Handle incoming chat messages"""
+    session = user_sessions[session_id]
+    
+    # Add user message to history
+    user_msg = {
+        "message": message,
+        "message_type": "user",
+        "timestamp": datetime.now().isoformat(),
+        "session_id": session_id
+    }
+    session["chat_history"].append(user_msg)
+    
+    # Send user message back to confirm receipt
+    await send_message_to_session(session_id, user_msg)
+    
+    # Process message and get bot response
+    try:
+        bot_response = await profile_builder.process_message(session_id, message)
+        
+        bot_msg = {
+            "message": bot_response,
+            "message_type": "bot",
+            "timestamp": datetime.now().isoformat(),
+            "session_id": session_id
+        }
+        session["chat_history"].append(bot_msg)
+        
+        # Send bot response
+        await send_message_to_session(session_id, bot_msg)
+        
+    except Exception as e:
+        logger.error(f"Error processing message for {session_id}: {e}")
+        error_msg = {
+            "message": "Sorry, I encountered an error. Please try again.",
+            "message_type": "system",
+            "timestamp": datetime.now().isoformat(),
+            "session_id": session_id
+        }
+        await send_message_to_session(session_id, error_msg)
+
+
+# ===== REST API Endpoints =====
+
+@app.get("/")
+async def get_index():
+    """Serve a simple API status page since frontend will be separate"""
+    return {
+        "message": "Personality Chat Simulator API",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "websocket": "/ws/{session_id}",
+            "profiles": "/api/profiles",
+            "session": "/api/session/{session_id}",
+            "start_conversation": "/api/conversation/start",
+            "docs": "/docs"
+        },
+        "frontend_note": "Frontend should be deployed separately using v0 or your preferred React framework"
+    }
+
+
+@app.get("/api/profiles")
+async def get_profiles():
+    """Get list of available predefined profiles"""
+    return {"profiles": predefined_profiles}
+
+
+@app.get("/api/session/{session_id}")
+async def get_session(session_id: str):
+    """Get session information"""
+    if session_id not in user_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    return {
+        "session_id": session_id,
+        "profile": user_sessions[session_id].get("profile"),
+        "profile_complete": user_sessions[session_id].get("profile_building_stage") == "complete",
+        "chat_history": user_sessions[session_id].get("chat_history", [])
+    }
+
+
+@app.post("/api/conversation/start")
+async def start_conversation(request: ConversationRequest, background_tasks: BackgroundTasks):
+    """Start a conversation between user's profile and a target profile"""
+    if request.session_id not in user_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    session = user_sessions[request.session_id]
+    if not session.get("profile") or session.get("profile_building_stage") != "complete":
+        raise HTTPException(status_code=400, detail="User profile not complete")
+    
+    if request.target_profile_id not in predefined_profiles:
+        raise HTTPException(status_code=404, detail="Target profile not found")
+    
+    conversation_id = str(uuid.uuid4())
+    
+    # Schedule the conversation to run in the background
+    background_tasks.add_task(
+        run_conversation_background,
+        conversation_id,
+        request.session_id,
+        request.target_profile_id,
+        request.max_turns,
+        request.enable_research
+    )
+    
+    return {
+        "conversation_id": conversation_id,
+        "status": "started",
+        "user_profile": session["profile"]["name"],
+        "target_profile": predefined_profiles[request.target_profile_id]["name"]
+    }
+
+
+@app.get("/api/conversations/{session_id}")
+async def get_conversations(session_id: str):
+    """Get active conversations for a session"""
+    session_conversations = {
+        conv_id: conv for conv_id, conv in active_conversations.items()
+        if hasattr(conv, 'session_id') and conv.session_id == session_id
+    }
+    return {"conversations": list(session_conversations.keys())}
+
+
+async def run_conversation_background(
+    conversation_id: str,
+    session_id: str,
+    target_profile_id: str,
+    max_turns: int,
+    enable_research: bool
+):
+    """Run conversation in background and stream updates to client"""
+    try:
+        client = AsyncDedalus()
+        
+        # Create user agent from session profile
+        user_profile = user_sessions[session_id]["profile"]
+        user_agent = PersonAgent(
+            name=user_profile["name"],
+            profile_data=user_profile,
+            client=client
+        )
+        
+        # Create target agent from predefined profile
+        target_profile = predefined_profiles[target_profile_id]
+        target_agent = PersonAgent(
+            name=target_profile["name"],
+            profile_data=target_profile,
+            client=client
+        )
+        
+        # Create conversation manager
+        conv_manager = ConversationManager(user_agent, target_agent)
+        conv_manager.conversation_id = conversation_id
+        conv_manager.session_id = session_id
+        active_conversations[conversation_id] = conv_manager
+        
+        # Send conversation start notification
+        await send_conversation_update(session_id, {
+            "conversation_id": conversation_id,
+            "speaker": "system",
+            "message": f"Starting conversation between {user_agent.name} and {target_agent.name}...",
+            "turn_number": 0,
+            "is_finished": False
+        })
+        
+        # Run the conversation with streaming updates
+        await run_conversation_with_streaming(conv_manager, session_id, max_turns, enable_research)
+        
+    except Exception as e:
+        logger.error(f"Error in background conversation {conversation_id}: {e}")
+        await send_conversation_update(session_id, {
+            "conversation_id": conversation_id,
+            "speaker": "system",
+            "message": f"Error in conversation: {e}",
+            "turn_number": -1,
+            "is_finished": True
+        })
+    finally:
+        if conversation_id in active_conversations:
+            del active_conversations[conversation_id]
+
+
+async def run_conversation_with_streaming(
+    conv_manager: ConversationManager,
+    session_id: str,
+    max_turns: int,
+    enable_research: bool
+):
+    """Run conversation with real-time streaming to client"""
+    try:
+        # Optional research phase
+        if enable_research:
+            await send_conversation_update(session_id, {
+                "conversation_id": conv_manager.conversation_id,
+                "speaker": "system",
+                "message": "Research phase: agents are learning about each other...",
+                "turn_number": 0,
+                "is_finished": False
+            })
+            await conv_manager._research_phase()
+        
+        # Start with introduction
+        introduction = await conv_manager.agent1.introduce()
+        conv_manager.conversation_history.add_message(conv_manager.agent1.name, introduction)
+        
+        await send_conversation_update(session_id, {
+            "conversation_id": conv_manager.conversation_id,
+            "speaker": conv_manager.agent1.name,
+            "message": introduction,
+            "turn_number": 1,
+            "is_finished": False
+        })
+        
+        # Update tracking
+        conv_manager._update_observations(conv_manager.agent1, introduction, is_introduction=True)
+        
+        # Main conversation loop
+        current_speaker = conv_manager.agent2
+        other_speaker = conv_manager.agent1
+        last_message = introduction
+        
+        for turn in range(max_turns):
+            # Generate response
+            response = await current_speaker.respond_to(other_speaker.name, last_message)
+            conv_manager.conversation_history.add_message(current_speaker.name, response)
+            
+            # Update observations
+            conv_manager._update_observations(current_speaker, response)
+            
+            # Get compatibility scores (with error handling for methods that might not exist)
+            compatibility_scores = None
+            try:
+                # Try to get compatibility scores if the methods exist
+                if hasattr(conv_manager.agent1_compatibility, 'get_overall_posterior_samples'):
+                    agent1_samples = conv_manager.agent1_compatibility.get_overall_posterior_samples(n=1000)
+                    agent2_samples = conv_manager.agent2_compatibility.get_overall_posterior_samples(n=1000)
+                    compatibility_scores = {
+                        f"{conv_manager.agent1.name}_to_{conv_manager.agent2.name}": float(agent1_samples.mean()),
+                        f"{conv_manager.agent2.name}_to_{conv_manager.agent1.name}": float(agent2_samples.mean()),
+                        "average": float(0.5 * (agent1_samples.mean() + agent2_samples.mean()))
+                    }
+                elif hasattr(conv_manager.agent1_compatibility, 'get_overall_point_estimate'):
+                    agent1_score = conv_manager.agent1_compatibility.get_overall_point_estimate()
+                    agent2_score = conv_manager.agent2_compatibility.get_overall_point_estimate()
+                    compatibility_scores = {
+                        f"{conv_manager.agent1.name}_to_{conv_manager.agent2.name}": float(agent1_score),
+                        f"{conv_manager.agent2.name}_to_{conv_manager.agent1.name}": float(agent2_score),
+                        "average": float(0.5 * (agent1_score + agent2_score))
+                    }
+            except Exception as e:
+                logger.warning(f"Could not calculate compatibility scores: {e}")
+                # Provide a default score
+                compatibility_scores = {"average": 0.5}
+            
+            # Send update
+            await send_conversation_update(session_id, {
+                "conversation_id": conv_manager.conversation_id,
+                "speaker": current_speaker.name,
+                "message": response,
+                "compatibility_scores": compatibility_scores,
+                "turn_number": turn + 2,  # +1 for introduction, +1 for current turn
+                "is_finished": False
+            })
+            
+            # Check if conversation should end (with error handling)
+            should_end = False
+            try:
+                should_end = conv_manager._should_end_conversation()
+            except Exception:
+                # If compatibility scoring fails, use simple turn-based stopping
+                should_end = turn >= max_turns - 2
+            
+            if should_end:
+                break
+            
+            # Switch speakers
+            current_speaker, other_speaker = other_speaker, current_speaker
+            last_message = response
+            
+            await asyncio.sleep(1)  # Brief pause between messages
+        
+        # Send final analysis
+        try:
+            results = conv_manager._end_conversation()
+            final_compatibility = results.get('overall_compatibility', 0.5)
+        except Exception as e:
+            logger.warning(f"Error getting final results: {e}")
+            final_compatibility = 0.5
+            results = {'overall_compatibility': final_compatibility, 'overall_status': 'Unknown'}
+        
+        final_message = f"""
+Conversation ended! Final compatibility analysis:
+• Overall compatibility: {final_compatibility:.3f}
+• Status: {results.get('overall_status', 'Unknown')}
+• Total turns: {turn + 1}
+"""
+        
+        await send_conversation_update(session_id, {
+            "conversation_id": conv_manager.conversation_id,
+            "speaker": "system",
+            "message": final_message.strip(),
+            "compatibility_scores": {
+                "final_compatibility": final_compatibility,
+                "agent1_compatibility": results.get('agent1_compatibility', 0.5),
+                "agent2_compatibility": results.get('agent2_compatibility', 0.5)
+            },
+            "turn_number": turn + 2,
+            "is_finished": True
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in streaming conversation: {e}")
+        await send_conversation_update(session_id, {
+            "conversation_id": conv_manager.conversation_id,
+            "speaker": "system",
+            "message": f"Error during conversation: {e}",
+            "turn_number": -1,
+            "is_finished": True
+        })
+
+
+async def send_conversation_update(session_id: str, update_data: Dict):
+    """Send conversation update to client"""
+    if session_id in active_connections:
+        message_data = {
+            "type": "conversation_update",
+            "data": update_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        await send_message_to_session(session_id, message_data)
+
+
+# Remove the HTML content function since we'll use a separate React frontend
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "api_main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )
