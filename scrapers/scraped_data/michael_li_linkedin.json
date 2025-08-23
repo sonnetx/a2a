@@ -1,0 +1,105 @@
+{
+  "url": "https://www.linkedin.com/in/michael-li-002775236/",
+  "name": "Michael Li",
+  "headline": "Sophomore at Stanford University",
+  "location": "He/Him",
+  "about": null,
+  "experiences": [
+    {
+      "title": "AI Developer",
+      "company": "Monolithic Power Systems, Inc. · Internship",
+      "date_range": null,
+      "location": null,
+      "description": null
+    },
+    {
+      "title": "Software Developer",
+      "company": "Proxima HQ · Internship",
+      "date_range": null,
+      "location": null,
+      "description": "• Developed an LLM-backed query answering system to streamline user-product interactions; Worked with data retrieved from company’s backend through GraphQL and prompt engineered optimized input queries using LangChain\n• Integrated various foundation models, cutting initial costs by 70% while maintaining performance\n• Translated the Python logic to a backend API endpoint and tested it using Postman\n• Containerized the backend using Docker for streamlined deployment and connected it to a frontend UI styled with React.js\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Developed an LLM-backed query answering system to streamline user-product interactions; Worked with data retrieved from company’s backend through GraphQL and prompt engineered optimized input queries using LangChain\n• Integrated various foundation models, cutting initial costs by 70% while maintaining performance\n• Translated the Python logic to a backend API endpoint and tested it using Postman\n• Containerized the backend using Docker for streamlined deployment and connected it to a frontend UI styled with React.js\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Developed an LLM-backed query answering system to streamline user-product interactions; Worked with data retrieved from company’s backend through GraphQL and prompt engineered optimized input queries using LangChain\n• Integrated various foundation models, cutting initial costs by 70% while maintaining performance\n• Translated the Python logic to a backend API endpoint and tested it using Postman\n• Containerized the backend using Docker for streamlined deployment and connected it to a frontend UI styled with React.js\n…see more"
+    },
+    {
+      "title": "Software Developer",
+      "company": "Happy dog · Self-employed",
+      "date_range": null,
+      "location": null,
+      "description": "• Developed and tested new front-end features that helped expand the extension to 110,000+ weekly users from 500 since first involvement.\n• Launched and manage a server of 10000+ users, maintaining user engagement through creative activities\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Developed and tested new front-end features that helped expand the extension to 110,000+ weekly users from 500 since first involvement.\n• Launched and manage a server of 10000+ users, maintaining user engagement through creative activities\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Developed and tested new front-end features that helped expand the extension to 110,000+ weekly users from 500 since first involvement.\n• Launched and manage a server of 10000+ users, maintaining user engagement through creative activities\n…see more"
+    },
+    {
+      "title": "Mentor",
+      "company": "Chemical Institute of Canada · Contract Part-time",
+      "date_range": null,
+      "location": null,
+      "description": "• Assisted personnel at the University of British Columbia with presentations and labs designed to train team Canada for the International Chemistry Olympiad 2022\n• Facilitated study sessions and 10+ hours of lectures on targeted material, helping the team achieve 3 bronze medals\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Assisted personnel at the University of British Columbia with presentations and labs designed to train team Canada for the International Chemistry Olympiad 2022\n• Facilitated study sessions and 10+ hours of lectures on targeted material, helping the team achieve 3 bronze medals\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Assisted personnel at the University of British Columbia with presentations and labs designed to train team Canada for the International Chemistry Olympiad 2022\n• Facilitated study sessions and 10+ hours of lectures on targeted material, helping the team achieve 3 bronze medals\n…see more"
+    }
+  ],
+  "education": [
+    {
+      "school": "Stanford University",
+      "degree": "2023 - 2027\n2023 - 2027",
+      "field": null,
+      "date_range": null,
+      "description": null
+    },
+    {
+      "school": "St. George's School",
+      "degree": "Student\nStudent",
+      "field": null,
+      "date_range": null,
+      "description": "Activities and societies: Badminton Team Captain, Chemistry Club Founder, Math Club, Basketball Team\nActivities and societies: Badminton Team Captain, Chemistry Club Founder, Math Club, Basketball Team"
+    },
+    {
+      "school": null,
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "Activities and societies: Badminton Team Captain, Chemistry Club Founder, Math Club, Basketball Team\nActivities and societies: Badminton Team Captain, Chemistry Club Founder, Math Club, Basketball Team"
+    }
+  ],
+  "skills": [],
+  "websites": [],
+  "email": null
+}

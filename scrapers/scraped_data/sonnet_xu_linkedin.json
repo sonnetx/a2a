@@ -1,0 +1,231 @@
+{
+  "url": "https://www.linkedin.com/in/sonnetxu/",
+  "name": "Sonnet Xu",
+  "headline": "Stanford CS & AI | LLMs @ Amazon, Stanford",
+  "location": "She/Her",
+  "about": "I work on generative AI research at Stanford and develop LLM tooling for diverse applications in research, venture, and industry. My experience spans generative AI, civil and technical AI ethics, as well as environmental robotics and medical research. Excited to tackle complex challenges where technology meets society.\nI work on generative AI research at Stanford and develop LLM tooling for diverse applications in research, venture, and industry. My experience spans generative AI, civil and technical AI ethics, as well as environmental robotics and medical research. Excited to tackle complex challenges where technology meets society.",
+  "experiences": [
+    {
+      "title": "Software Engineer Intern",
+      "company": "Amazon · Internship",
+      "date_range": null,
+      "location": null,
+      "description": "Improving LLM guardrails and safety at Amazon\nImproving LLM guardrails and safety at Amazon"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Improving LLM guardrails and safety at Amazon\nImproving LLM guardrails and safety at Amazon"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Improving LLM guardrails and safety at Amazon\nImproving LLM guardrails and safety at Amazon"
+    },
+    {
+      "title": "Stanford University",
+      "company": "1 yr 11 mos",
+      "date_range": null,
+      "location": null,
+      "description": "Led 50th reunion\nLed 50th reunion"
+    },
+    {
+      "title": "Reunion Crew Team Lead",
+      "company": "Oct 2023 - Present · 1 yr 11 mos",
+      "date_range": null,
+      "location": null,
+      "description": "Led 50th reunion\nLed 50th reunion"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Led 50th reunion\nLed 50th reunion"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Led 50th reunion\nLed 50th reunion"
+    },
+    {
+      "title": "Civil Disagreement Ethics Fellow",
+      "company": "Part-time",
+      "date_range": null,
+      "location": null,
+      "description": "Selected for the Intercollegiate Civil Disagreement Program (ICDP) Fellowship. Teaching assistant for Democracy and Disagreement.\n\nhttps://humsci.stanford.edu/events/democracy-and-disagreement-winter-25\n\nThe mission of the ICDP is to advance fundamental democratic commitments to critical inquiry, freedom of expression, equality, and agency; to develop students’ skills to facilitate conversations across political difference; and to create spaces for civil disagreement to flourish on college campuses.\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Selected for the Intercollegiate Civil Disagreement Program (ICDP) Fellowship. Teaching assistant for Democracy and Disagreement.\n\nhttps://humsci.stanford.edu/events/democracy-and-disagreement-winter-25\n\nThe mission of the ICDP is to advance fundamental democratic commitments to critical inquiry, freedom of expression, equality, and agency; to develop students’ skills to facilitate conversations across political difference; and to create spaces for civil disagreement to flourish on college campuses.\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Selected for the Intercollegiate Civil Disagreement Program (ICDP) Fellowship. Teaching assistant for Democracy and Disagreement.\n\nhttps://humsci.stanford.edu/events/democracy-and-disagreement-winter-25\n\nThe mission of the ICDP is to advance fundamental democratic commitments to critical inquiry, freedom of expression, equality, and agency; to develop students’ skills to facilitate conversations across political difference; and to create spaces for civil disagreement to flourish on college campuses.\n…see more"
+    },
+    {
+      "title": "Intercollegiate Civil Disagreement Program Fellowship | McCoy Family Center for Ethics in Society",
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Intercollegiate Civil Disagreement Program Fellowship | McCoy Family Center for Ethics in Society\nIntercollegiate Civil Disagreement Program Fellowship | McCoy Family Center for Ethics in Society"
+    },
+    {
+      "title": "Intercollegiate Civil Disagreement Program Fellowship | McCoy Family Center for Ethics in Society",
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Intercollegiate Civil Disagreement Program Fellowship | McCoy Family Center for Ethics in Society\nIntercollegiate Civil Disagreement Program Fellowship | McCoy Family Center for Ethics in Society"
+    },
+    {
+      "title": "Democracy and Disagreement Teaching Assistant",
+      "company": "Part-time",
+      "date_range": null,
+      "location": null,
+      "description": null
+    },
+    {
+      "title": "Machine Learning Research Assistant",
+      "company": "Stanford University School of Medicine · Part-time",
+      "date_range": null,
+      "location": null,
+      "description": "- Demonstrated steerability of generalist vision-language models through prompt engineering (Accepted NeurIPS workshop 2024)\n- Biased large language models through many-shot in-context learning in multi-modal medical settings (PSB & MICCAI 2025)\n\nSee publications for most updated list of projects\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "- Demonstrated steerability of generalist vision-language models through prompt engineering (Accepted NeurIPS workshop 2024)\n- Biased large language models through many-shot in-context learning in multi-modal medical settings (PSB & MICCAI 2025)\n\nSee publications for most updated list of projects\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "- Demonstrated steerability of generalist vision-language models through prompt engineering (Accepted NeurIPS workshop 2024)\n- Biased large language models through many-shot in-context learning in multi-modal medical settings (PSB & MICCAI 2025)\n\nSee publications for most updated list of projects\n…see more"
+    },
+    {
+      "title": "Student Research Fellow",
+      "company": "Hoover Institution, Stanford University · Part-time",
+      "date_range": null,
+      "location": null,
+      "description": "• Developed a local RAG app in LangChain to enhance database search efficiency and security. \n• Processed large datasets via APIs and virtual machines, utilizing web scraping for in-depth data analysis.\n• Analyzed patent similarity using LLM vector embeddings and novel cosine similarity metrics.\n• Researched US-China strategic competition, focusing on supply chain resiliency in critical technologies.\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Developed a local RAG app in LangChain to enhance database search efficiency and security. \n• Processed large datasets via APIs and virtual machines, utilizing web scraping for in-depth data analysis.\n• Analyzed patent similarity using LLM vector embeddings and novel cosine similarity metrics.\n• Researched US-China strategic competition, focusing on supply chain resiliency in critical technologies.\n…see more"
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "• Developed a local RAG app in LangChain to enhance database search efficiency and security. \n• Processed large datasets via APIs and virtual machines, utilizing web scraping for in-depth data analysis.\n• Analyzed patent similarity using LLM vector embeddings and novel cosine similarity metrics.\n• Researched US-China strategic competition, focusing on supply chain resiliency in critical technologies.\n…see more"
+    },
+    {
+      "title": "Generative AI Developer",
+      "company": "Google Summer of Code · Seasonal",
+      "date_range": null,
+      "location": null,
+      "description": "Developed a generative AI urban design platform to empower citizens in city planning. Users could generate, customize, and review images of city elements like bus stops and centers, using prompts or reference images. Implemented a history log for feedback, enabling meaningful community input to planners. This project combined AI, UI design, and community engagement, leveraging technology to democratize urban planning."
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Developed a generative AI urban design platform to empower citizens in city planning. Users could generate, customize, and review images of city elements like bus stops and centers, using prompts or reference images. Implemented a history log for feedback, enabling meaningful community input to planners. This project combined AI, UI design, and community engagement, leveraging technology to democratize urban planning."
+    },
+    {
+      "title": null,
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "Developed a generative AI urban design platform to empower citizens in city planning. Users could generate, customize, and review images of city elements like bus stops and centers, using prompts or reference images. Implemented a history log for feedback, enabling meaningful community input to planners. This project combined AI, UI design, and community engagement, leveraging technology to democratize urban planning."
+    },
+    {
+      "title": "GitHub - OETBoston/ai-for-design",
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "GitHub - OETBoston/ai-for-design\nGitHub - OETBoston/ai-for-design"
+    },
+    {
+      "title": "GitHub - OETBoston/ai-for-design",
+      "company": null,
+      "date_range": null,
+      "location": null,
+      "description": "GitHub - OETBoston/ai-for-design\nGitHub - OETBoston/ai-for-design"
+    }
+  ],
+  "education": [
+    {
+      "school": "Stanford University",
+      "degree": "Bachelor's degree, Computer Science\nBachelor's degree, Computer Science",
+      "field": null,
+      "date_range": null,
+      "description": "Activities and societies: Head of Engineering @ Stanford Blockchain, Machine Learning for Ecology @ Stanford Student Robotics, Managing Editor @ Stanford Daily, Social Chair @ Asian American Students Association\n…see more"
+    },
+    {
+      "school": null,
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "Activities and societies: Head of Engineering @ Stanford Blockchain, Machine Learning for Ecology @ Stanford Student Robotics, Managing Editor @ Stanford Daily, Social Chair @ Asian American Students Association\n…see more"
+    },
+    {
+      "school": "Troy High School",
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "Grade: 4.48\nGrade: 4.48"
+    },
+    {
+      "school": null,
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "Grade: 4.48\nGrade: 4.48"
+    },
+    {
+      "school": null,
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "Activities and societies: Chemistry Club (President), Economics Club (President), FRC 226 Engineering Design and Strategy Co-Lead, HOSA\nActivities and societies: Chemistry Club (President), Economics Club (President), FRC 226 Engineering Design and Strategy Co-Lead, HOSA"
+    },
+    {
+      "school": null,
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "AP Courses (17): Chemistry, Biology, Physics C: Electricity and Magnetism, Physics C: Mechanics, European History, Chinese, Computer Science A, Calculus BC, Statistics, Psychology, Microeconomics, Macroeconomics, English Language, US Government, Comparative Government\nReceived a 5 on all exams.\n…see more"
+    },
+    {
+      "school": null,
+      "degree": null,
+      "field": null,
+      "date_range": null,
+      "description": "AP Courses (17): Chemistry, Biology, Physics C: Electricity and Magnetism, Physics C: Mechanics, European History, Chinese, Computer Science A, Calculus BC, Statistics, Psychology, Microeconomics, Macroeconomics, English Language, US Government, Comparative Government\nReceived a 5 on all exams.\n…see more"
+    }
+  ],
+  "skills": [],
+  "websites": [],
+  "email": null
+}
