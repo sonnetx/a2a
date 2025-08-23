@@ -7,9 +7,7 @@ import os
 from agentmail import AgentMail
 
 
-class PersonAgent:
-    """Enhanced PersonAgent with research capabilities, conversation management, and email notifications"""
-    
+class PersonAgent:   
     def __init__(self, name: str, profile_data: Dict, client: AsyncDedalus, model: str = "openai/gpt-4o"):
         self.name = name
         self.profile_data = profile_data
@@ -88,26 +86,22 @@ class PersonAgent:
         return "\n".join(formatted)
     
     async def setup_email_inbox(self) -> str:
-        """Setup email inbox using AgentMail client directly"""
-        # Get API key from environment
+        """Setup email inbox using AgentMail"""
         api_key = os.getenv("AGENTMAIL_API_KEY")
         if not api_key:
             return "Error: AGENTMAIL_API_KEY not found in environment variables"
         
-        # Initialize AgentMail client
         self.agentmail_client = AgentMail(api_key=api_key)
         
         if self.inbox_id:
             return f"Using existing email setup for {self.name}"
         
-        # Get existing inboxes (more reliable than creating new ones)
         try:
             response = self.agentmail_client.inboxes.list()
             if len(response.inboxes) == 0:
                 print("❌ No existing inboxes found")
                 return "Error: No existing inboxes found"
             
-            # Use first available inbox
             inbox = response.inboxes[0]
             self.inbox_id = inbox.inbox_id
             
@@ -126,20 +120,20 @@ class PersonAgent:
         runner = DedalusRunner(self.client)
         
         try:
-            result = await runner.run(
-                input=f"Research information about a person named {other_agent_name}. Find their background, interests, career, and any notable achievements. Focus on information that would help determine compatibility for friendship or professional relationships.",
-                model=self.model,
-                mcp_servers=["tsion/brave-search-mcp"],
-                stream=False
-            )
+            # result = await runner.run(
+            #     input=f"Research information about a person named {other_agent_name}. Find their background, interests, career, and any notable achievements. Focus on information that would help determine compatibility for friendship or professional relationships.",
+            #     model=self.model,
+            #     mcp_servers=["AgentMail"],
+            #     stream=False
+            # )
             
-            research_data = result.final_output
-            self.knowledge[other_agent_name] = {
-                "research": research_data,
-                "timestamp": datetime.now().isoformat()
-            }
+            # research_data = result.final_output
+            # self.knowledge[other_agent_name] = {
+            #     "research": research_data,
+            #     "timestamp": datetime.now().isoformat()
+            # }
             
-            return research_data
+            return ""
         except Exception as e:
             fallback_info = f"Could not research {other_agent_name} due to: {e}"
             self.knowledge[other_agent_name] = {
@@ -157,7 +151,7 @@ class PersonAgent:
             "timestamp": datetime.now().isoformat()
         })
         
-        # Only keep the last 10 messages to avoid context overflow
+        # Only keep the last 20 messages to avoid context overflow
         if len(self.conversation_history) > 20:
             self.conversation_history = self.conversation_history[-20:]
         
@@ -170,17 +164,18 @@ class PersonAgent:
             response_result = await runner.run(
                 input=f"""{context}
 
-    You are {self.name} having a natural conversation with {other_agent_name}. 
+You are {self.name} having a natural conversation with {other_agent_name}. 
 
-    Respond authentically as yourself based on your personality and interests. As the conversation develops:
-    - Share your thoughts and experiences naturally
-    - Ask questions about things that genuinely interest you
-    - If you feel a connection forming, you might suggest staying in touch or meeting up
-    - If you sense you're quite different or the conversation isn't flowing well, you might naturally start wrapping up politely
-    - Be genuine about whether you're enjoying the conversation or finding common ground
+IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Respond authentically as yourself based on your personality and interests. As the conversation develops:
+- Share your thoughts and experiences naturally but BRIEFLY
+- Ask ONE question at a time if interested
+- If you feel a connection forming, you might suggest staying in touch or meeting up
+- If you sense you're quite different or the conversation isn't flowing well, you might naturally start wrapping up politely
+- Be genuine but CONCISE about whether you're enjoying the conversation or finding common ground
 
-    Don't force compatibility assessment - let it emerge naturally from your authentic reactions to {other_agent_name}.""",
+Don't force compatibility assessment - let it emerge naturally from your authentic reactions to {other_agent_name}.""",
                 model=self.model,
+                mcp_servers=["AgentMail"],
                 stream=False
             )
             
@@ -214,7 +209,7 @@ class PersonAgent:
             return fallback_response
     
     async def _check_natural_compatibility_conclusion(self, other_agent_name: str, latest_response: str) -> None:
-        """Check if the agent naturally reached a compatibility conclusion"""
+        """Check if the agent naturally reached a compatibility conclusion using AI analysis"""
         runner = DedalusRunner(self.client)
         
         try:
@@ -253,6 +248,7 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
 - NATURALLY_INCOMPATIBLE: if they naturally concluded or showed disinterest
 - STILL_DEVELOPING: if the conversation is naturally continuing without conclusion""",
                 model=self.model,
+                mcp_servers=["AgentMail"],
                 stream=False
             )
             
@@ -287,7 +283,7 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
         return "\n".join(formatted)
     
     async def _send_natural_compatibility_email(self, other_agent_name: str, final_message: str, compatible: bool) -> str:
-        """Send an email using AgentMail client directly"""
+        """Send an email using AgentMail client"""
         if not self.inbox_id:
             await self.setup_email_inbox()
         
@@ -298,38 +294,42 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
         emoji = "💚" if compatible else "💔"
         
         try:
-            # Build email content
             subject = f"{emoji} Natural Compatibility Assessment: {self.name} & {other_agent_name}"
+            
+            # Use AI to analyze conversation duration
+            duration_analysis = await self._ai_analyze_conversation_duration()
+            
+            # Use AI to extract key topics
+            key_topics = await self._ai_extract_key_topics()
             
             message_content = f"""Hi there,
 
-    This is an automated report from the AI agent compatibility system.
+This is an automated report from the AI agent compatibility system.
 
-    **Assessment Summary:**
-    - Agents: {self.name} ↔ {other_agent_name}
-    - Natural Conclusion: {status}
-    - Assessment Method: Organic conversation analysis
+**Assessment Summary:**
+- Agents: {self.name} ↔ {other_agent_name}
+- Natural Conclusion: {status}
+- Assessment Method: Organic conversation analysis
 
-    **How it happened:**
-    {self.name} naturally reached this conclusion during conversation. The final message that indicated compatibility was:
-    "{final_message}"
+**How it happened:**
+{self.name} naturally reached this conclusion during conversation. The final message that indicated compatibility was:
+"{final_message}"
 
-    **Conversation Insights:**
-    - Duration: {self._get_conversation_duration()}
-    - Total exchanges: {len(self.conversation_history)}
-    - Key topics: {self._get_key_topics()}
-    - Flow: Natural and authentic
+**Conversation Insights:**
+- Duration: {duration_analysis}
+- Total exchanges: {len(self.conversation_history)}
+- Key topics: {key_topics}
 
-    **What this means:**
-    {"Both agents showed genuine interest in continuing their connection. This suggests strong compatibility for future interactions." if compatible else "The agents naturally concluded their interaction, suggesting different compatibility needs. This is a healthy outcome."}
+**What this means:**
+{"Both agents showed genuine interest in continuing their connection. This suggests strong compatibility for future interactions." if compatible else "The agents naturally concluded their interaction, suggesting different compatibility needs. This is a healthy outcome."}
 
-    **Recent Conversation:**
-    {self._format_recent_conversation(8)}
+**Recent Conversation:**
+{self._format_recent_conversation(8)}
 
-    Best regards,
-    {self.name} (AI Agent)"""
+Best regards,
+{self.name} (AI Agent)"""
 
-            # Send email directly using AgentMail client
+            # Send email using AgentMail
             result = self.agentmail_client.inboxes.messages.send(
                 inbox_id=self.inbox_id,
                 to="ajalonso@stanford.edu",
@@ -338,7 +338,7 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
             )
             
             print(f"✅ Email sent from {self.inbox_id}")
-            print(f"📧 To: admin@example.com")
+            print(f"📧 To: ajalonso@stanford.edu")
             print(f"📝 Subject: {subject}")
             print(f"🆔 Message ID: {result.message_id}")
             
@@ -347,7 +347,71 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
         except Exception as e:
             print(f"❌ Error sending email: {e}")
             return f"Error sending email: {e}"
+    
+    async def _ai_analyze_conversation_duration(self) -> str:
+        """Use AI to analyze and describe conversation duration in a natural way"""
+        if len(self.conversation_history) < 2:
+            return "Less than 1 minute"
+        
+        start_time = datetime.fromisoformat(self.conversation_history[0]['timestamp'])
+        end_time = datetime.fromisoformat(self.conversation_history[-1]['timestamp'])
+        duration_seconds = (end_time - start_time).total_seconds()
+        
+        runner = DedalusRunner(self.client)
+        
+        try:
+            result = await runner.run(
+                input=f"""Describe this conversation duration in a natural, human-friendly way:
+                
+Duration in seconds: {duration_seconds}
+Number of message exchanges: {len(self.conversation_history)}
 
+Provide a brief, natural description of how long this conversation lasted. Consider both the actual time elapsed and the number of exchanges to give context about the conversation's pace and depth.""",
+                model=self.model,
+                mcp_servers=["AgentMail"],
+                stream=False
+            )
+            
+            return result.final_output.strip()
+        except Exception as e:
+            # Fallback to simple calculation
+            minutes = duration_seconds / 60
+            if minutes < 1:
+                return "Less than 1 minute"
+            elif minutes < 60:
+                return f"{int(minutes)} minutes"
+            else:
+                hours = int(minutes / 60)
+                remaining_minutes = int(minutes % 60)
+                return f"{hours}h {remaining_minutes}m"
+    
+    async def _ai_extract_key_topics(self) -> str:
+        """Use AI to extract and summarize key topics from conversation"""
+        if not self.conversation_history:
+            return "No conversation topics"
+        
+        runner = DedalusRunner(self.client)
+        
+        try:
+            all_messages = "\n".join([
+                f"{msg['speaker']}: {msg['message']}" 
+                for msg in self.conversation_history
+            ])
+            
+            result = await runner.run(
+                input=f"""Analyze this conversation and identify the key topics that were discussed:
+
+{all_messages}
+
+Extract and summarize the main themes, subjects, and areas of interest that came up during this conversation. Provide a concise summary of the key topics as a comma-separated list or brief description.""",
+                model=self.model,
+                mcp_servers=["AgentMail"],
+                stream=False
+            )
+            
+            return result.final_output.strip()
+        except Exception as e:
+            return "General conversation topics"
     
     def _build_response_context(self, other_agent_name: str) -> str:
         """Build context string for response generation"""
@@ -369,75 +433,80 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
         
         return context
     
-    def _get_conversation_duration(self) -> str:
-        """Calculate conversation duration"""
-        if len(self.conversation_history) < 2:
-            return "Less than 1 minute"
+    async def get_ai_conversation_stats(self) -> Dict:
+        """Get AI-analyzed statistics about the conversation"""
+        if not self.conversation_history:
+            return {
+                'total_messages': 0,
+                'analysis': 'No conversation data available'
+            }
         
-        start_time = datetime.fromisoformat(self.conversation_history[0]['timestamp'])
-        end_time = datetime.fromisoformat(self.conversation_history[-1]['timestamp'])
-        duration = end_time - start_time
+        runner = DedalusRunner(self.client)
         
-        minutes = duration.total_seconds() / 60
-        if minutes < 1:
-            return "Less than 1 minute"
-        elif minutes < 60:
-            return f"{int(minutes)} minutes"
-        else:
-            hours = int(minutes / 60)
-            remaining_minutes = int(minutes % 60)
-            return f"{hours}h {remaining_minutes}m"
-    
-    def _get_key_topics(self) -> str:
-        """Extract key topics from conversation"""
-        # Simple keyword extraction from conversation
-        all_text = " ".join([msg['message'] for msg in self.conversation_history])
-        
-        # Common topics to look for
-        topics = []
-        topic_keywords = {
-            'work': ['job', 'work', 'career', 'profession', 'office'],
-            'hobbies': ['hobby', 'interest', 'enjoy', 'love', 'passion'],
-            'travel': ['travel', 'trip', 'vacation', 'visit', 'country'],
-            'family': ['family', 'parent', 'child', 'sibling', 'married'],
-            'technology': ['tech', 'computer', 'software', 'AI', 'digital'],
-            'sports': ['sport', 'game', 'team', 'play', 'exercise']
-        }
-        
-        for topic, keywords in topic_keywords.items():
-            if any(keyword.lower() in all_text.lower() for keyword in keywords):
-                topics.append(topic)
-        
-        return ", ".join(topics) if topics else "General conversation"
+        try:
+            conversation_text = self._format_conversation_history()
+            
+            result = await runner.run(
+                input=f"""Analyze this conversation between {self.name} and others. Provide insights about:
+
+Conversation Data:
+{conversation_text}
+
+Profile Context:
+{self.get_formatted_profile()}
+
+Please analyze:
+1. Conversation engagement level (high/medium/low)
+2. Communication style compatibility
+3. Shared interests discovered
+4. Conversation flow quality
+5. Emotional tone and rapport
+6. Questions asked and answered
+7. Overall interaction assessment
+
+Provide your analysis as a structured summary.""",
+                model=self.model,
+                mcp_servers=["AgentMail"],
+                stream=False
+            )
+            
+            return {
+                'total_messages': len(self.conversation_history),
+                'my_messages': len([msg for msg in self.conversation_history if msg['speaker'] == self.name]),
+                'other_messages': len([msg for msg in self.conversation_history if msg['speaker'] != self.name]),
+                'compatibility_status': self.compatibility_status,
+                'ai_analysis': result.final_output.strip(),
+                'conversation_duration': await self._ai_analyze_conversation_duration(),
+                'key_topics': await self._ai_extract_key_topics()
+            }
+            
+        except Exception as e:
+            # Fallback to basic stats
+            my_messages = [msg for msg in self.conversation_history if msg['speaker'] == self.name]
+            other_messages = [msg for msg in self.conversation_history if msg['speaker'] != self.name]
+            
+            return {
+                'total_messages': len(self.conversation_history),
+                'my_messages': len(my_messages),
+                'other_messages': len(other_messages),
+                'compatibility_status': self.compatibility_status,
+                'ai_analysis': f"Error during AI analysis: {e}",
+                'conversation_duration': await self._ai_analyze_conversation_duration(),
+                'key_topics': await self._ai_extract_key_topics()
+            }
     
     def _format_conversation_history(self) -> str:
-        """Format conversation history for email"""
+        """Format conversation history for analysis"""
         formatted = []
         for entry in self.conversation_history:
-            timestamp = entry['timestamp'].split('T')[1][:8]  # Just time, not date
+            timestamp = entry['timestamp'].split('T')[1][:8] if 'T' in entry['timestamp'] else 'unknown'
             formatted.append(f"[{timestamp}] {entry['speaker']}: {entry['message']}")
         
         return "\n".join(formatted)
     
-    def get_conversation_stats(self) -> Dict:
-        """Get statistics about the conversation"""
-        my_messages = [msg for msg in self.conversation_history if msg['speaker'] == self.name]
-        other_messages = [msg for msg in self.conversation_history if msg['speaker'] != self.name]
-        
-        return {
-            'total_messages': len(self.conversation_history),
-            'my_messages': len(my_messages),
-            'other_messages': len(other_messages),
-            'avg_message_length': sum(len(msg['message'].split()) for msg in my_messages) / len(my_messages) if my_messages else 0,
-            'questions_asked': sum(msg['message'].count('?') for msg in my_messages),
-            'compatibility_status': self.compatibility_status,
-            'conversation_duration': self._get_conversation_duration(),
-            'key_topics': self._get_key_topics()
-        }
-    
     async def have_conversation_with(self, other_agent: 'PersonAgent', max_exchanges: int = 10) -> Dict:
-        """Have a fully natural conversation with another agent until compatibility naturally emerges"""
-        print(f"🤝 Starting natural conversation between {self.name} and {other_agent.name}")
+        """Have a conversation with another agent until compatibility naturally emerges"""
+        print(f"🤝 Starting conversation between {self.name} and {other_agent.name}")
         
         # Both agents create their own inboxes automatically
         await asyncio.gather(
@@ -480,14 +549,21 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
             # Small delay to make conversation feel more natural
             await asyncio.sleep(0.5)
         
-        # Final result
+        # Get AI-powered conversation analysis
+        self_stats = await self.get_ai_conversation_stats()
+        other_stats = await other_agent.get_ai_conversation_stats()
+        
+        # Final result with AI analysis
         result = {
             'participants': [self.name, other_agent.name],
             'exchanges': exchange_count,
             'conclusion_method': 'natural',
             'self_status': self.compatibility_status,
             'other_status': other_agent.compatibility_status,
-            'conversation_stats': self.get_conversation_stats(),
+            'ai_conversation_analysis': {
+                f'{self.name}_analysis': self_stats,
+                f'{other_agent.name}_analysis': other_stats
+            },
             'natural_conclusion': {
                 'self_reached_conclusion': self.compatibility_status is not None,
                 'other_reached_conclusion': other_agent.compatibility_status is not None,
@@ -549,16 +625,18 @@ async def demo_natural_agent_conversation():
     print("🚀 Starting fully natural agent conversation demo...")
     print("Features:")
     print("✅ Automatic inbox creation (no user input)")
-    print("✅ Natural compatibility assessment")
+    print("✅ AI-driven compatibility assessment")
     print("✅ Organic conversation flow")
     print("✅ Smart email notifications")
+    print("✅ AI-powered topic extraction")
+    print("✅ AI-analyzed conversation insights")
     print("="*50)
     
     # Have them converse naturally
     result = await alice.have_conversation_with(bob, max_exchanges=12)
     
     print("\n" + "="*50)
-    print("📊 FINAL CONVERSATION ANALYSIS:")
+    print("📊 FINAL AI-POWERED CONVERSATION ANALYSIS:")
     print(f"Method: {result['conclusion_method']}")
     print(f"Exchanges: {result['exchanges']}")
     print(f"Natural conclusions reached: {result['natural_conclusion']['emails_sent']}")

@@ -276,7 +276,6 @@ async def main():
     # Check for person name argument
     if len(sys.argv) < 2:
         print("Usage: python agent.py \"Person Name\"")
-        print("Example: python agent.py \"Sonnet Xu\"")
         sys.exit(1)
     
     person_name = sys.argv[1]

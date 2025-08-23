@@ -22,9 +22,6 @@ from person_agent import PersonAgent
 from conversation_manager import ConversationManager
 from api_router.profile_convo_api import chat_with_claude, get_conversation_history, clear_conversation_history, ChatMessage
 
-# Note: Make sure compatibility.py exists with CompatibilityScorer class
-# or import it from wherever it's defined in your existing codebase
-
 # Load environment variables
 load_dotenv()
 
@@ -111,11 +108,6 @@ async def load_predefined_profiles():
     global predefined_profiles
     profiles_dir = Path("profiles")
     
-    if not profiles_dir.exists():
-        profiles_dir.mkdir()
-        # Create some example profiles
-        await create_example_profiles(profiles_dir)
-    
     for profile_file in profiles_dir.glob("*.json"):
         try:
             with open(profile_file, 'r', encoding='utf-8') as f:
@@ -125,66 +117,6 @@ async def load_predefined_profiles():
                 logger.info(f"Loaded profile: {profile_data.get('name', profile_id)}")
         except Exception as e:
             logger.error(f"Error loading profile {profile_file}: {e}")
-
-
-async def create_example_profiles(profiles_dir: Path):
-    """Create example profiles if none exist"""
-    example_profiles = {
-        "alice_tech": {
-            "name": "Alice Chen",
-            "age": 28,
-            "occupation": "Software Engineer",
-            "hobbies": ["rock climbing", "photography", "cooking"],
-            "personality": {
-                "traits": ["adventurous", "creative", "analytical"],
-                "interests": ["technology", "outdoor activities", "art"],
-                "goals": ["start a tech company", "travel to Japan", "learn guitar"]
-            },
-            "background": {
-                "education": "Computer Science BS",
-                "location": "San Francisco",
-                "family": "Single, close to siblings"
-            }
-        },
-        "bob_marketing": {
-            "name": "Bob Smith",
-            "age": 32,
-            "occupation": "Marketing Manager",
-            "hobbies": ["running", "coffee brewing", "reading"],
-            "personality": {
-                "traits": ["social", "organized", "curious"],
-                "interests": ["business", "fitness", "literature"],
-                "goals": ["run a marathon", "write a book", "learn Spanish"]
-            },
-            "background": {
-                "education": "Marketing MBA",
-                "location": "Austin",
-                "family": "Married, two kids"
-            }
-        },
-        "sarah_artist": {
-            "name": "Sarah Wilson",
-            "age": 26,
-            "occupation": "Graphic Designer",
-            "hobbies": ["painting", "yoga", "gardening"],
-            "personality": {
-                "traits": ["creative", "empathetic", "introspective"],
-                "interests": ["art", "wellness", "nature"],
-                "goals": ["open art studio", "learn meditation", "travel to India"]
-            },
-            "background": {
-                "education": "Fine Arts BFA",
-                "location": "Portland",
-                "family": "Single, close to parents"
-            }
-        }
-    }
-    
-    for profile_id, profile_data in example_profiles.items():
-        profile_file = profiles_dir / f"{profile_id}.json"
-        with open(profile_file, 'w', encoding='utf-8') as f:
-            json.dump(profile_data, f, indent=2)
-
 
 # ===== WebSocket Connection Management =====
 
@@ -533,7 +465,7 @@ async def run_conversation_background(
     session_id: str,
     target_profile_id: str,
     max_turns: int,
-    enable_research: bool,
+    enable_research: bool = False,
     message_pause_seconds: float = 5.0
 ):
     """Run conversation in background and stream updates to client"""
@@ -759,10 +691,6 @@ async def send_conversation_update(session_id: str, update_data: Dict):
             "timestamp": datetime.now().isoformat()
         }
         await send_message_to_session(session_id, message_data)
-
-
-# Remove the HTML content function since we'll use a separate React frontend
-
 
 if __name__ == "__main__":
     uvicorn.run(
