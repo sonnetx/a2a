@@ -580,8 +580,7 @@ async def run_conversation_with_streaming(
             "is_finished": False
         })
         
-        # Update tracking
-        conv_manager._update_observations(conv_manager.agent1, introduction, is_introduction=True)
+        # No compatibility tracking needed
         
         # Pause to allow frontend to display the introduction message
         print(f"⏳ Waiting {message_pause_seconds}s for introduction display...")
@@ -600,51 +599,21 @@ async def run_conversation_with_streaming(
             # Log conversation to terminal
             print(f"💬 {current_speaker.name}: {response}")
             
-            # Update observations
-            conv_manager._update_observations(current_speaker, response)
+            # No compatibility tracking needed
             
-            # Get compatibility scores (with error handling for methods that might not exist)
-            compatibility_scores = None
-            try:
-                # Try to get compatibility scores if the methods exist
-                if hasattr(conv_manager.agent1_compatibility, 'get_overall_posterior_samples'):
-                    agent1_samples = conv_manager.agent1_compatibility.get_overall_posterior_samples(n=1000)
-                    agent2_samples = conv_manager.agent2_compatibility.get_overall_posterior_samples(n=1000)
-                    compatibility_scores = {
-                        f"{conv_manager.agent1.name}_to_{conv_manager.agent2.name}": float(agent1_samples.mean()),
-                        f"{conv_manager.agent2.name}_to_{conv_manager.agent1.name}": float(agent2_samples.mean()),
-                        "average": float(0.5 * (agent1_samples.mean() + agent2_samples.mean()))
-                    }
-                elif hasattr(conv_manager.agent1_compatibility, 'get_overall_point_estimate'):
-                    agent1_score = conv_manager.agent1_compatibility.get_overall_point_estimate()
-                    agent2_score = conv_manager.agent2_compatibility.get_overall_point_estimate()
-                    compatibility_scores = {
-                        f"{conv_manager.agent1.name}_to_{conv_manager.agent2.name}": float(agent1_score),
-                        f"{conv_manager.agent2.name}_to_{conv_manager.agent1.name}": float(agent2_score),
-                        "average": float(0.5 * (agent1_score + agent2_score))
-                    }
-            except Exception as e:
-                logger.warning(f"Could not calculate compatibility scores: {e}")
-                # Provide a default score
-                compatibility_scores = {"average": 0.5}
+            # No compatibility scoring needed
             
             # Send update
             await send_conversation_update(session_id, {
                 "conversation_id": conv_manager.conversation_id,
                 "speaker": current_speaker.name,
                 "message": response,
-                "compatibility_scores": compatibility_scores,
                 "turn_number": turn + 2,  # +1 for introduction, +1 for current turn
                 "is_finished": False
             })
             
-            # Check if conversation should end (with error handling)
-            should_end = False
-            try:
-                should_end = conv_manager._should_end_conversation()
-            except Exception:
-                # If compatibility scoring fails, use simple turn-based stopping
-                should_end = turn >= max_turns - 2
+            # Check if conversation should end based on max turns
+            should_end = turn >= max_turns - 2
             
             if should_end:
                 break
@@ -657,25 +626,15 @@ async def run_conversation_with_streaming(
             print(f"⏳ Waiting {message_pause_seconds}s for message display...")
             await asyncio.sleep(message_pause_seconds)
         
-        # Send final analysis
-        try:
-            results = conv_manager._end_conversation()
-            final_compatibility = results.get('overall_compatibility', 0.5)
-        except Exception as e:
-            logger.warning(f"Error getting final results: {e}")
-            final_compatibility = 0.5
-            results = {'overall_compatibility': final_compatibility, 'overall_status': 'Unknown'}
-        
+        # Send final summary
         final_message = f"""
-Conversation ended! Final compatibility analysis:
-• Overall compatibility: {final_compatibility:.3f}
-• Status: {results.get('overall_status', 'Unknown')}
+Conversation ended!
 • Total turns: {turn + 1}
+• Max turns reached: {max_turns}
 """
         
         print(f"\n🏁 CONVERSATION ENDED")
         print("=" * 60)
-        print(f"🎯 Final Compatibility: {final_compatibility:.3f} ({results.get('overall_status', 'Unknown')})")
         print(f"📊 Total Turns: {turn + 1}")
         print("=" * 60)
         
@@ -683,11 +642,6 @@ Conversation ended! Final compatibility analysis:
             "conversation_id": conv_manager.conversation_id,
             "speaker": "system",
             "message": final_message.strip(),
-            "compatibility_scores": {
-                "final_compatibility": final_compatibility,
-                "agent1_compatibility": results.get('agent1_compatibility', 0.5),
-                "agent2_compatibility": results.get('agent2_compatibility', 0.5)
-            },
             "turn_number": turn + 2,
             "is_finished": True
         })

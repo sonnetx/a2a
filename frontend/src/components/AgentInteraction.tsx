@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Users, Play, Square, RotateCcw, Settings } from 'lucide-react'
+import { Users, Play, Square, RotateCcw } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Agent {
@@ -41,7 +41,7 @@ const AgentInteraction: React.FC = () => {
   const [currentTurn, setCurrentTurn] = useState(0)
   const [maxTurns, setMaxTurns] = useState(8)
   const [isLoading, setIsLoading] = useState(false)
-  const [compatibilityScore, setCompatibilityScore] = useState<number | null>(null)
+
   
   const conversationEndRef = useRef<HTMLDivElement>(null)
 
@@ -60,7 +60,7 @@ const AgentInteraction: React.FC = () => {
     setIsLoading(true)
     setConversation([])
     setCurrentTurn(0)
-    setCompatibilityScore(null)
+
 
     // Simulate conversation turns
     for (let turn = 0; turn < maxTurns; turn++) {
@@ -84,10 +84,7 @@ const AgentInteraction: React.FC = () => {
       }
     }
 
-    // Calculate compatibility score
     setTimeout(() => {
-      const score = Math.random() * 0.4 + 0.6 // Random score between 0.6-1.0
-      setCompatibilityScore(score)
       setIsLoading(false)
     }, 1000)
   }
@@ -100,7 +97,7 @@ const AgentInteraction: React.FC = () => {
   const resetConversation = () => {
     setConversation([])
     setCurrentTurn(0)
-    setCompatibilityScore(null)
+
     setIsRunning(false)
     setIsLoading(false)
   }
@@ -234,27 +231,8 @@ const AgentInteraction: React.FC = () => {
           ))}
         </div>
 
-        {/* Compatibility Score */}
-        {compatibilityScore !== null && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-4 p-4 bg-gradient-to-r from-primary-500/20 to-accent-500/20 rounded-xl border border-white/20"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-white">Compatibility Score:</span>
-              <span className="text-2xl font-bold gradient-text">
-                {(compatibilityScore * 100).toFixed(1)}%
-              </span>
-            </div>
-            <div className="mt-2 w-full bg-white/20 rounded-full h-2">
-              <div 
-                className="h-2 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full transition-all duration-1000"
-                style={{ width: `${compatibilityScore * 100}%` }}
-              ></div>
-            </div>
-          </motion.div>
-        )}
+
+
       </div>
 
       {/* Conversation Display */}

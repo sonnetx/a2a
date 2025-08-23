@@ -25,7 +25,7 @@ client = anthropic.Anthropic(
 
 class ChatMessage(BaseModel):
     message: str
-    user_id: str = "default_user"
+    user_id: str = "my_agent"
 
 class ChatResponse(BaseModel):
     response: str
@@ -141,6 +141,9 @@ async def chat_with_claude(message: ChatMessage) -> ChatResponse:
         conv_history.save_message(message.user_id, "user", message.message)
         conv_history.save_message(message.user_id, "assistant", response_text)
         
+        # Update user profile with conversation context
+        await update_user_profile_from_chat(message.user_id)
+        
         # Generate conversation ID (simple timestamp-based)
         conversation_id = f"{message.user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
@@ -161,6 +164,86 @@ async def get_conversation_history(user_id: str) -> List[Dict[str, Any]]:
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading history: {str(e)}")
+
+async def update_user_profile_from_chat(user_id: str) -> None:
+    """Update user profile JSON with summarized chat context"""
+    try:
+        # Load conversation history
+        chat_history = conv_history.load_history(user_id)
+        
+        if not chat_history:
+            return  # No chat history to process
+        
+        # Map certain user IDs to specific profile files
+        profile_mapping = {
+            "frontend_user": "my_agent",  # Map frontend_user to my_agent profile
+            "default_user": "my_agent"    # Map default_user to my_agent profile
+        }
+        
+        # Get the actual profile name to use
+        profile_name = profile_mapping.get(user_id, user_id)
+        profile_path = conv_history.profiles_dir / f"{profile_name}.json"
+        
+        # Load existing profile or create new one
+        if profile_path.exists():
+            with open(profile_path, 'r', encoding='utf-8') as f:
+                profile_data = json.load(f)
+        else:
+            # Create basic profile structure if it doesn't exist
+            profile_data = {
+                "name": user_id,
+                "personality": {},
+                "background": {}
+            }
+        
+        # Prepare chat history for summarization
+        recent_messages = chat_history[-20:]  # Last 20 messages
+        chat_text = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
+        
+        # Use Claude to summarize the conversation and extract context
+        summary_response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=500,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""Based on this conversation history, create a concise summary that captures:
+1. The user's current interests, concerns, or goals
+2. Recent topics they've discussed
+3. Their communication style and preferences
+4. Any context that would help an AI agent understand them better
+
+Conversation history:
+{chat_text}
+
+Provide a 5-6 sentence summary that captures the essence of who this 
+person is and what they care about based on this conversation. Also mention
+any most-recently desginated tasks or goals they have.
+"""
+                }
+            ]
+        )
+        
+        # Extract summary
+        if summary_response.content and len(summary_response.content) > 0:
+            context_summary = summary_response.content[0].text.strip()
+        else:
+            context_summary = "Recent conversation history available."
+        
+        # Update the profile with context
+        profile_data["context_and_goal"] = context_summary
+        profile_data["last_updated"] = datetime.now().isoformat()
+        
+        # Save updated profile
+        with open(profile_path, 'w', encoding='utf-8') as f:
+            json.dump(profile_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"Updated profile for {user_id} with conversation context")
+        
+    except Exception as e:
+        print(f"Error updating profile for {user_id}: {e}")
+        # Don't raise exception to avoid breaking the chat flow
+
 
 async def clear_conversation_history(user_id: str) -> Dict[str, str]:
     """Clear conversation history for a user"""

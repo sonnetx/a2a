@@ -253,9 +253,6 @@ interface ConversationUpdate {
   conversation_id: string
   speaker: string
   message: string
-  compatibility_scores?: {
-    [key: string]: number
-  }
   turn_number: number
   is_finished: boolean
 }
@@ -356,7 +353,7 @@ export default function AgentAnimation() {
   const [availableProfiles, setAvailableProfiles] = useState<{[key: string]: any}>({})
   const [isRunning, setIsRunning] = useState(false)
   const [messages, setMessages] = useState<ConversationMessage[]>([])
-  const [, setCompatibilityScore] = useState<number | null>(null)
+
   
   // Agent state - dynamic based on conversation
   const [agents, setAgents] = useState<Agent[]>([
@@ -440,9 +437,7 @@ export default function AgentAnimation() {
         // Handle system messages
         if (update.is_finished) {
           setIsRunning(false)
-          if (update.compatibility_scores?.final_compatibility) {
-            setCompatibilityScore(update.compatibility_scores.final_compatibility)
-          }
+
         }
         return
       }
@@ -458,10 +453,7 @@ export default function AgentAnimation() {
       
       setMessages(prev => [...prev, message])
       
-      // Update compatibility score
-      if (update.compatibility_scores?.average) {
-        setCompatibilityScore(update.compatibility_scores.average)
-      }
+
       
       // Update agent activity
       setAgents(prev => prev.map(agent => ({
@@ -476,7 +468,7 @@ export default function AgentAnimation() {
     
     setIsRunning(true)
     setMessages([])
-    setCompatibilityScore(null)
+
 
     // Use fixed IDs: my_agent (user) and person_alice (target)
     const targetProfile = availableProfiles['person_alice']

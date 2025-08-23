@@ -83,6 +83,10 @@ class PersonAgent:
                 if value and value != 'N/A':
                     formatted.append(f"{key.replace('_', ' ').title()}: {value}")
         
+        # Add conversation context if available
+        if 'context_and_goal' in self.profile_data:
+            formatted.append(f"Recent Context: {self.profile_data['context_and_goal']}")
+        
         return "\n".join(formatted)
     
     async def setup_email_inbox(self) -> str:
