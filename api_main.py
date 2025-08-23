@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 from dotenv import load_dotenv
@@ -22,6 +23,7 @@ from dedalus_labs import AsyncDedalus
 from person_agent import PersonAgent
 from conversation_manager import ConversationManager
 from personality_tracker import PersonalityTracker
+from api_router.profile_convo_api import chat_with_claude, get_conversation_history, clear_conversation_history, ChatMessage
 
 # Note: Make sure compatibility.py exists with CompatibilityScorer class
 # or import it from wherever it's defined in your existing codebase
@@ -34,6 +36,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Conversation Simulation API", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # React dev server
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global state
 active_connections: Dict[str, WebSocket] = {}
@@ -418,6 +434,9 @@ async def get_index():
             "profiles": "/api/profiles",
             "session": "/api/session/{session_id}",
             "start_conversation": "/api/conversation/start",
+            "chat": "/api/chat",
+            "chat_history": "/api/chat/history/{user_id}",
+            "clear_history": "/api/chat/history/{user_id}",
             "docs": "/docs"
         },
         "frontend_note": "Frontend should be deployed separately using v0 or your preferred React framework"
@@ -485,6 +504,29 @@ async def get_conversations(session_id: str):
         if hasattr(conv, 'session_id') and conv.session_id == session_id
     }
     return {"conversations": list(session_conversations.keys())}
+
+
+# ===== LLM Chat Endpoints =====
+
+@app.post("/api/chat")
+async def chat_endpoint(message: ChatMessage):
+    """Chat with Claude LLM"""
+    response = await chat_with_claude(message)
+    return response
+
+
+@app.get("/api/chat/history/{user_id}")
+async def get_chat_history(user_id: str):
+    """Get conversation history for a user"""
+    history = await get_conversation_history(user_id)
+    return {"user_id": user_id, "history": history}
+
+
+@app.delete("/api/chat/history/{user_id}")
+async def clear_chat_history(user_id: str):
+    """Clear conversation history for a user"""
+    result = await clear_conversation_history(user_id)
+    return result
 
 
 async def run_conversation_background(

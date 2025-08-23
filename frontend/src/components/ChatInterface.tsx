@@ -32,17 +32,29 @@ const ChatInterface: React.FC = () => {
     scrollToBottom()
   }, [messages])
 
-  const simulateAIResponse = (userMessage: string) => {
-    const responses = [
-      "That's an interesting question! Let me think about that...",
-      "I understand what you're asking. Here's my perspective on that topic.",
-      "Great question! I'd be happy to help you with that.",
-      "That's a fascinating topic. Let me share some insights with you.",
-      "I see what you mean. Let me provide some useful information about that.",
-    ]
-    
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-    return `${randomResponse} You mentioned: "${userMessage}". I'm here to assist you with any questions or tasks you might have!`
+  const callChatAPI = async (userMessage: string): Promise<string> => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          user_id: 'frontend_user'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return data.response
+    } catch (error) {
+      console.error('Error calling chat API:', error)
+      return "I'm sorry, I'm having trouble connecting to my AI brain right now. Please try again!"
+    }
   }
 
   const handleSendMessage = async () => {
@@ -59,12 +71,12 @@ const ChatInterface: React.FC = () => {
     setInputValue('')
     setIsTyping(true)
 
-    // Simulate AI response delay
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000))
+    // Get AI response from API
+    const aiResponseText = await callChatAPI(userMessage.text)
 
     const aiResponse: Message = {
       id: (Date.now() + 1).toString(),
-      text: simulateAIResponse(userMessage.text),
+      text: aiResponseText,
       isUser: false,
       timestamp: new Date()
     }
