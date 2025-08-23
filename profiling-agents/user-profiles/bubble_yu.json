@@ -1,0 +1,53 @@
+{
+  "age": 20,
+  "hobbies": [
+    "climbing",
+    "coding",
+    "building flying hoverboards",
+    "go karting",
+    "building mechatronics devices"
+  ],
+  "personality": {
+    "traits": [
+      "adventurous",
+      "creative",
+      "technically minded",
+      "innovative",
+      "ambitious",
+      "visionary",
+      "goal-oriented",
+      "independent",
+      "solitary",
+      "focused"
+    ],
+    "interests": [
+      "technology",
+      "programming",
+      "extreme sports",
+      "engineering",
+      "motorsports",
+      "mechatronics",
+      "human augmentation",
+      "exoskeletons",
+      "personal projects"
+    ],
+    "goals": [
+      "building advanced technology",
+      "creating flying vehicles",
+      "building mechatronics devices that enable superhuman experiences",
+      "creating exoskeletons with ultrahuman jumping abilities"
+    ]
+  },
+  "background": {
+    "family": "supportive family"
+  },
+  "additional_info": {
+    "technical_projects": "building flying hoverboards and mechatronics devices",
+    "programming_skills": "has coding experience",
+    "adventure_sports": "enjoys climbing and go karting",
+    "dream_project": "exoskeletons that give ultrahuman jumping abilities",
+    "focus_area": "superhuman experience enhancement through mechatronics",
+    "work_style": "prefers working independently on personal projects, doesn't work well with others",
+    "priorities": "only focuses on things that align with personal goals"
+  }
+}
