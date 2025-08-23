@@ -153,7 +153,7 @@ const AgentInteraction: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto h-[80vh] flex flex-col">
+    <div className="w-full max-w-6xl mx-auto h-[85vh] flex flex-col">
       {/* Control Panel */}
       <div className="glass rounded-2xl p-6 mb-6 shadow-xl">
         <div className="flex items-center justify-between mb-4">

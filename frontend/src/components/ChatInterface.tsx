@@ -93,7 +93,7 @@ const ChatInterface: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto h-[80vh] flex flex-col">
+    <div className="w-full max-w-4xl mx-auto h-[85vh] flex flex-col">
       {/* Chat Container */}
       <div className="glass rounded-3xl flex-1 flex flex-col overflow-hidden shadow-2xl">
         {/* Messages Area */}
@@ -110,30 +110,20 @@ const ChatInterface: React.FC = () => {
 
         {/* Input Area */}
         <div className="p-6 border-t border-white/10">
-          <div className="flex items-end space-x-4">
-            <div className="flex-1 relative">
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your message here..."
-                className="w-full glass-dark rounded-2xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-primary-400/50 placeholder-white/50 text-white min-h-[50px] max-h-32"
-                rows={1}
-              />
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSendMessage}
-              disabled={!inputValue.trim()}
-              className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-2xl p-3 transition-all duration-200 shadow-lg"
-            >
-              {isTyping ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </motion.button>
+          <div className="relative">
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message here and press Enter..."
+              className="w-full glass-dark rounded-3xl px-6 py-4 resize-none focus:outline-none focus:ring-2 focus:ring-primary-400/50 placeholder-white/50 text-white min-h-[60px] max-h-32 pr-12"
+              rows={1}
+            />
+            {isTyping && (
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                <Loader2 className="w-5 h-5 animate-spin text-primary-400" />
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import ChatInterface from './components/ChatInterface'
 import AgentInteraction from './components/AgentInteraction'
 import TabNavigation from './components/TabNavigation'
-import Header from './components/Header'
 
 function App() {
   const [activeTab, setActiveTab] = useState('chatbot')
@@ -18,12 +17,14 @@ function App() {
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col h-screen">
-        <Header />
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="w-full">
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            {activeTab === 'chatbot' ? <ChatInterface /> : <AgentInteraction />}
-          </div>
+        {/* Tab Navigation at top */}
+        <div className="pt-6 px-4">
+          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+        
+        {/* Content area takes remaining space */}
+        <div className="flex-1 flex items-center justify-center px-4 pb-4">
+          {activeTab === 'chatbot' ? <ChatInterface /> : <AgentInteraction />}
         </div>
       </div>
     </div>

@@ -24,7 +24,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
   ]
 
   return (
-    <div className="flex justify-center mb-8">
+    <div className="flex justify-center mb-4">
       <div className="glass rounded-2xl p-2 flex gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon
