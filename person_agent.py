@@ -194,13 +194,15 @@ Keep it conversational and focused on their current goals/interests.""",
 You are an AI agent representing {self.name} in a conversation with an agent representing {other_agent_name}. 
 Speak in third person, using pronouns like "she" or "he" as appropriate, or use the actual name. Whatever fits with the flow of the conversation
 
-IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Respond authentically as yourself based on your personality and interests.
+IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Try to do some small talk, and try to not repeat the same
+question or topic over and over. Like if we talked about scheduling once, don't ask about it again.
 
 GOAL-ORIENTED BEHAVIOR: If your boss has current goals or context mentioned in their profile, 
 try to naturally steer the conversation towards achieving those goals or addressing their current interests/concerns.
 
 However, don't infer new information. If you find that there is some information that you may need from
-your boss, send an email to your boss to get the information.
+your boss, send an email to your boss to get the information. For example, if they are planning to schedule
+a time, you should send an eamil to confirm. Tell the other agent that you need to confirm with your boss.
 """,
                 model=self.model,
                 mcp_servers=["AgentMail"],
@@ -216,9 +218,8 @@ your boss, send an email to your boss to get the information.
                 "timestamp": datetime.now().isoformat()
             })
             
-            # Check for natural compatibility conclusion after sufficient conversation
-            if len(self.conversation_history) >= 6 and self.compatibility_status is None:
-                await self._check_natural_compatibility_conclusion(other_agent_name, response)
+            # Check if agent needs to confirm something with their boss
+            await self._check_for_boss_confirmation_needed(other_agent_name, response)
             
             return response
             
@@ -298,6 +299,85 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
         except Exception as e:
             print(f"Error checking natural compatibility: {e}")
 
+    async def _check_for_boss_confirmation_needed(self, other_agent_name: str, latest_response: str) -> None:
+        """Check if the agent needs to confirm something with their boss"""
+        runner = DedalusRunner(self.client)
+        
+        try:
+            analysis_result = await runner.run(
+                input=f"""Analyze if {self.name}'s agent needs to confirm something with {self.name} based on this conversation.
+
+{self.name}'s Profile and Goals:
+{self.get_formatted_profile()}
+
+Recent conversation:
+{self._format_recent_conversation(3)}
+
+{self.name}'s latest response: "{latest_response}"
+
+IMPORTANT: Only suggest confirmation if the agent needs information that is NOT already available in {self.name}'s profile, goals, or context.
+
+Look for situations where the agent needs NEW information not in the profile:
+- Scheduling specific times/dates (ONLY if {self.name}'s availability is unknown)
+- Confirming details not covered in their goals/context
+- Getting permission for things outside their stated interests
+
+DO NOT suggest confirmation if:
+- The information is already in {self.name}'s profile/goals
+- The agent can reasonably respond based on existing context
+- It's within {self.name}'s stated interests and goals
+
+Respond with:
+- NEEDS_CONFIRMATION: if agent needs NEW information not in profile
+- NO_CONFIRMATION: if agent has enough information to proceed
+
+Include a brief reason if confirmation is needed.""",
+                model=self.model,
+                mcp_servers=["AgentMail"],
+                stream=False
+            )
+            
+            analysis = analysis_result.final_output.strip()
+            
+            if "NEEDS_CONFIRMATION" in analysis:
+                await self._send_boss_confirmation_email(other_agent_name, latest_response, analysis)
+                
+        except Exception as e:
+            print(f"Error checking boss confirmation: {e}")
+
+    async def _send_boss_confirmation_email(self, other_agent_name: str, latest_response: str, reason: str) -> None:
+        """Send a short confirmation email to the boss"""
+        if not self.inbox_id:
+            await self.setup_email_inbox()
+        
+        if not hasattr(self, 'agentmail_client'):
+            return
+        
+        try:
+            subject = f"Quick confirmation needed - conversation with {other_agent_name}"
+            
+            message_content = f"""Hi {self.name},
+
+I'm chatting with {other_agent_name} and need to confirm something with you.
+
+Recent exchange: "{latest_response}"
+
+Please let me know how to proceed.
+
+Thanks!"""
+
+            result = self.agentmail_client.inboxes.messages.send(
+                inbox_id=self.inbox_id,
+                to="michaelli2005li@gmail.com",
+                subject=subject,
+                text=message_content
+            )
+            
+            print(f"📧 Boss confirmation email sent to {self.name}")
+            
+        except Exception as e:
+            print(f"❌ Error sending boss confirmation email: {e}")
+
     def _format_recent_conversation(self, num_messages: int = 5) -> str:
         """Format recent conversation history"""
         if not self.conversation_history:
@@ -330,32 +410,13 @@ Based ONLY on {self.name}'s natural behavior and language, respond with ONE of:
             # Use AI to extract key topics
             key_topics = await self._ai_extract_key_topics()
             
-            message_content = f"""Hi there,
+            message_content = f"""Hi,
 
-This is an automated report from the AI agent compatibility system.
+{self.name}'s agent here. Just concluded a conversation with {other_agent_name}.
 
-**Assessment Summary:**
-- Agents: {self.name} ↔ {other_agent_name}
-- Natural Conclusion: {status}
-- Assessment Method: Organic conversation analysis
+Result: {status} - {final_message}
 
-**How it happened:**
-{self.name} naturally reached this conclusion during conversation. The final message that indicated compatibility was:
-"{final_message}"
-
-**Conversation Insights:**
-- Duration: {duration_analysis}
-- Total exchanges: {len(self.conversation_history)}
-- Key topics: {key_topics}
-
-**What this means:**
-{"Both agents showed genuine interest in continuing their connection. This suggests strong compatibility for future interactions." if compatible else "The agents naturally concluded their interaction, suggesting different compatibility needs. This is a healthy outcome."}
-
-**Recent Conversation:**
-{self._format_recent_conversation(8)}
-
-Best regards,
-{self.name} (AI Agent)"""
+{"Looks like they connected well and might want to continue the relationship!" if compatible else "Natural conclusion reached - different compatibility needs."}"""
 
             # Send email using AgentMail
             result = self.agentmail_client.inboxes.messages.send(
