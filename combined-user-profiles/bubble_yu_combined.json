@@ -1,0 +1,73 @@
+{
+  "name": "Bubble Yu",
+  "occupation": "Co-Founder",
+  "background": {
+    "education": "Computer Science Bachelor's (in progress)",
+    "location": "San Francisco",
+    "family": "supportive family"
+  },
+  "age": 20,
+  "hobbies": [
+    "climbing",
+    "coding",
+    "building flying hoverboards",
+    "go karting",
+    "building mechatronics devices"
+  ],
+  "personality": {
+    "traits": [
+      "visionary",
+      "focused",
+      "goal-oriented",
+      "entrepreneurial",
+      "innovative",
+      "problem-solving",
+      "ambitious",
+      "collaborative",
+      "independent",
+      "solitary",
+      "creative",
+      "adventurous",
+      "technical",
+      "leadership-oriented",
+      "technically minded"
+    ],
+    "interests": [
+      "accessibility solutions",
+      "exoskeletons",
+      "motorsports",
+      "human-computer interaction",
+      "mechatronics",
+      "wearable technology",
+      "hardware development",
+      "programming",
+      "personal projects",
+      "artificial intelligence",
+      "engineering",
+      "human augmentation",
+      "startup building",
+      "technology",
+      "extreme sports"
+    ],
+    "goals": [
+      "develop successful startup ventures",
+      "building advanced technology",
+      "creating exoskeletons with ultrahuman jumping abilities",
+      "create impactful hardware products",
+      "creating flying vehicles",
+      "building mechatronics devices that enable superhuman experiences",
+      "innovate in HCI field",
+      "build scalable technology solutions",
+      "advance accessibility through technology"
+    ]
+  },
+  "additional_info": {
+    "technical_projects": "building flying hoverboards and mechatronics devices",
+    "programming_skills": "has coding experience",
+    "adventure_sports": "enjoys climbing and go karting",
+    "dream_project": "exoskeletons that give ultrahuman jumping abilities",
+    "focus_area": "superhuman experience enhancement through mechatronics",
+    "work_style": "prefers working independently on personal projects, doesn't work well with others",
+    "priorities": "only focuses on things that align with personal goals"
+  }
+}
