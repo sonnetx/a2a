@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bot, Users, Orbit } from 'lucide-react'
+import { Bot, Users, Orbit, Network } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface TabNavigationProps {
@@ -26,6 +26,12 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
       label: 'Agent Animation',
       icon: Orbit,
       description: '3D visualization of agents'
+    },
+    {
+      id: 'network',
+      label: 'Premium Access',
+      icon: Network,
+      description: 'Unlock all personas'
     }
   ]
 
