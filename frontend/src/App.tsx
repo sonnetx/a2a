@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import ChatInterface from './components/ChatInterface'
 import AgentInteraction from './components/AgentInteraction'
 import AgentAnimation from './components/AgentAnimation'
 import TabNavigation from './components/TabNavigation'
+import NetworkAccess from './components/NetworkAccess'
 
 function App() {
   const [activeTab, setActiveTab] = useState('chatbot')
@@ -28,6 +29,7 @@ function App() {
           {activeTab === 'chatbot' && <ChatInterface />}
           {activeTab === 'agents' && <AgentInteraction />}
           {activeTab === 'agent-animation' && <AgentAnimation />}
+          {activeTab === 'network' && <NetworkAccess />}
         </div>
       </div>
     </div>
