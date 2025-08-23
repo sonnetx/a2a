@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import ChatInterface from './components/ChatInterface'
 import AgentInteraction from './components/AgentInteraction'
+import AgentAnimation from './components/AgentAnimation'
 import TabNavigation from './components/TabNavigation'
 
 function App() {
@@ -24,7 +25,9 @@ function App() {
         
         {/* Content area takes remaining space */}
         <div className="flex-1 flex items-center justify-center px-4 pb-4">
-          {activeTab === 'chatbot' ? <ChatInterface /> : <AgentInteraction />}
+          {activeTab === 'chatbot' && <ChatInterface />}
+          {activeTab === 'agents' && <AgentInteraction />}
+          {activeTab === 'agent-animation' && <AgentAnimation />}
         </div>
       </div>
     </div>
