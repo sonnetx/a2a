@@ -18,6 +18,13 @@ class PersonAgent:
         self.conversation_history = []
         self.compatibility_status = None  # None, 'compatible', 'incompatible'
         self.inbox_id = None  # Will store AgentMail inbox ID
+        self.conversation_paused = False  # Track if conversation is paused waiting for boss reply
+        self.waiting_for_boss_reply = False  # Track if waiting for specific boss reply
+        self.boss_email = "michaelli2005li@gmail.com"  # Boss email address
+        self.last_checked_message_time = None  # Track last message check time
+        self.boss_reply_context = None  # Store boss reply for next response
+        self.last_sent_email_time = None  # Track when we last sent an email needing reply
+        self.waiting_for_reply_to_subject = None  # Track subject of email we're waiting for reply to
         
     def _should_use_mcp_servers(self) -> bool:
         """Determine if this agent should use MCP servers (only Michael gets email capabilities)"""
@@ -124,6 +131,110 @@ class PersonAgent:
             print(f"❌ Error setting up AgentMail: {e}")
             return f"Error setting up AgentMail: {e}"
     
+    async def check_for_boss_reply(self) -> Optional[Dict]:
+        """Check for new messages from boss email address that are replies to our recent email"""
+        if not self._should_use_mcp_servers() or not hasattr(self, 'agentmail_client'):
+            return None
+            
+        try:
+            # Get messages from inbox
+            response = self.agentmail_client.inboxes.messages.list(inbox_id=self.inbox_id)
+            
+            print(f"🔍 Checking {len(response.messages)} messages in inbox...")
+            print(f"🕐 Looking for replies newer than: {self.last_sent_email_time}")
+            print(f"📧 Waiting for reply to subject containing: {self.waiting_for_reply_to_subject}")
+            
+            # Filter messages from boss that are replies to our recent email
+            boss_replies = []
+            for message in response.messages:
+                # Get sender from from_ field
+                message_from = getattr(message, 'from_', '')
+                
+                # Check if message is from boss - handle "Name <email>" format
+                is_from_boss = self.boss_email in message_from
+                
+                if is_from_boss:
+                    # Get timestamp (it's already a datetime object)
+                    msg_time = getattr(message, 'timestamp', datetime.now())
+                    subject = getattr(message, 'subject', 'No subject')
+                    
+                    print(f"📧 Boss message: '{subject}' at {msg_time}")
+                    
+                    # CRITICAL: Only consider messages AFTER our last sent email
+                    is_newer_than_sent = (self.last_sent_email_time is None or 
+                                         msg_time > self.last_sent_email_time)
+                    
+                    # Check if it's a reply to our specific email
+                    is_reply_to_our_email = (
+                        self.waiting_for_reply_to_subject is None or  # No specific subject to match
+                        self.waiting_for_reply_to_subject in subject or  # Subject contains our sent subject
+                        subject.startswith("Re:")  # General reply indicator
+                    )
+                    
+                    if is_newer_than_sent and is_reply_to_our_email:
+                        print(f"✅ Found valid boss reply: '{subject}' (newer than sent email)")
+                        
+                        # Get message content from preview field
+                        content = getattr(message, 'preview', 'No content')
+                        
+                        boss_replies.append({
+                            'message_id': getattr(message, 'message_id', 'unknown'),
+                            'subject': subject,
+                            'text': content,
+                            'from': message_from,
+                            'created_at': msg_time.isoformat(),
+                            'timestamp': msg_time
+                        })
+                    else:
+                        if not is_newer_than_sent:
+                            print(f"🕐 Skipping old message: '{subject}' (sent before our email)")
+                        elif not is_reply_to_our_email:
+                            print(f"📧 Skipping unrelated message: '{subject}' (not a reply to our email)")
+            
+            # Return the most recent valid boss reply if any
+            if boss_replies:
+                latest_reply = max(boss_replies, key=lambda m: m['timestamp'])
+                print(f"🎯 Found boss reply to our recent email: '{latest_reply['text'][:50]}...'")
+                return latest_reply
+            else:
+                print(f"❌ No replies found from boss to our recent email")
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Error checking for boss reply: {e}")
+            import traceback
+            print(f"❌ Full traceback: {traceback.format_exc()}")
+            return None
+    
+    async def wait_for_boss_reply(self, timeout_seconds: int = 300) -> Optional[Dict]:
+        """Wait for boss reply with polling, returns boss message or None if timeout"""
+        if not self._should_use_mcp_servers():
+            return None
+            
+        print(f"⏳ Waiting for boss reply (timeout: {timeout_seconds}s)...")
+        self.waiting_for_boss_reply = True
+        self.conversation_paused = True
+        
+        start_time = datetime.now()
+        poll_interval = 5  # Check every 5 seconds
+        
+        while (datetime.now() - start_time).total_seconds() < timeout_seconds:
+            boss_message = await self.check_for_boss_reply()
+            if boss_message:
+                print(f"✅ Received boss reply: {boss_message['subject']}")
+                self.waiting_for_boss_reply = False
+                self.conversation_paused = False
+                return boss_message
+            
+            await asyncio.sleep(poll_interval)
+        
+        # Timeout reached
+        print(f"⏰ Timeout waiting for boss reply after {timeout_seconds}s")
+        self.waiting_for_boss_reply = False
+        self.conversation_paused = False
+        return None
+    
     async def introduce(self) -> str:
         """Generate introduction message"""
         runner = DedalusRunner(self.client)
@@ -201,7 +312,8 @@ Keep it conversational and focused on their current goals/interests.""",
                 input=f"""{context}
 
 You are an AI agent representing {self.name} in a conversation with an agent representing {other_agent_name}. 
-Speak in third person, using pronouns like "she" or "he" as appropriate, or use the actual name. Whatever fits with the flow of the conversation
+Speak in third person, using pronouns like "she" or "he" as appropriate, or use the actual name. Whatever fits with the flow of the conversation.
+Sound natural though, don't sound like a robot. Like don't say: Michael thinks Alice... Use more natural language and he/she/him/her.
 
 IMPORTANT: Keep your responses SHORT and conversational (1-2 sentences max). Try to do some small talk, and try to not repeat the same
 question or topic over and over.
@@ -330,7 +442,7 @@ IMPORTANT: Only suggest confirmation if the agent needs information that is NOT 
 
 Look for situations where the agent needs NEW information not in the profile:
 - If they are looking to scheduling specific times/dates
-- If Tuesday or Thursday are mentioned, then you must confirm that availbility with your boss and send an email
+- If days of the week are mentioned, then you must confirm that availbility with your boss and send an email
 
 DO NOT suggest confirmation if:
 - The information is already in {self.name}'s profile/goals
@@ -350,18 +462,23 @@ Include a brief reason if confirmation is needed.""",
             analysis = analysis_result.final_output.strip()
             
             if "NEEDS_CONFIRMATION" in analysis:
-                await self._send_boss_confirmation_email(other_agent_name, latest_response, analysis)
+                boss_reply = await self._send_boss_confirmation_email(other_agent_name, latest_response, analysis)
+                if boss_reply:
+                    # Store boss reply for use in next response
+                    self.boss_reply_context = boss_reply
+                else:
+                    self.boss_reply_context = None
                 
         except Exception as e:
             print(f"Error checking boss confirmation: {e}")
 
-    async def _send_boss_confirmation_email(self, other_agent_name: str, latest_response: str, reason: str) -> None:
-        """Send a short confirmation email to the boss"""
+    async def _send_boss_confirmation_email(self, other_agent_name: str, latest_response: str, reason: str) -> Optional[str]:
+        """Send a short confirmation email to the boss and wait for reply"""
         if not self.inbox_id:
             await self.setup_email_inbox()
         
         if not hasattr(self, 'agentmail_client'):
-            return
+            return None
         
         try:
             subject = f"Quick confirmation needed - conversation with {other_agent_name}"
@@ -399,15 +516,41 @@ Write ONLY the email content."""
 
             result = self.agentmail_client.inboxes.messages.send(
                 inbox_id=self.inbox_id,
-                to="michaelli2005li@gmail.com",
+                to=self.boss_email,
                 subject=subject,
                 text=message_content
             )
             
             print(f"📧 Boss confirmation email sent to {self.name}")
             
+            # CRITICAL: Track when we sent this email so we only look for newer replies
+            from datetime import timezone
+            self.last_sent_email_time = datetime.now(timezone.utc)  # Use UTC timezone to match AgentMail
+            self.waiting_for_reply_to_subject = subject.replace("Re: ", "")  # Remove Re: prefix if present
+            
+            print(f"🕐 Email sent at: {self.last_sent_email_time}")
+            print(f"📧 Waiting for reply to: '{self.waiting_for_reply_to_subject}'")
+            
+            # CRITICAL: Wait for boss reply before continuing
+            print(f"⏸️ CONVERSATION PAUSED - Waiting for boss reply...")
+            boss_reply = await self.wait_for_boss_reply(timeout_seconds=300)  # 5 minute timeout
+            
+            if boss_reply:
+                print(f"✅ Boss replied: {boss_reply['text'][:100]}...")
+                # Clear tracking variables after successful reply
+                self.last_sent_email_time = None
+                self.waiting_for_reply_to_subject = None
+                return boss_reply['text']
+            else:
+                print(f"⏰ No boss reply received - continuing conversation")
+                # Clear tracking variables after timeout
+                self.last_sent_email_time = None
+                self.waiting_for_reply_to_subject = None
+                return None
+            
         except Exception as e:
             print(f"❌ Error sending boss confirmation email: {e}")
+            return None
 
     def _format_recent_conversation(self, num_messages: int = 5) -> str:
         """Format recent conversation history"""
@@ -544,6 +687,14 @@ Extract and summarize the main themes, subjects, and areas of interest that came
         if other_agent_name in self.knowledge:
             context += f"What you know about {other_agent_name}:\n"
             context += f"{self.knowledge[other_agent_name].get('research', 'No information available.')}\n\n"
+        
+        # Add boss reply context if available
+        if hasattr(self, 'boss_reply_context') and self.boss_reply_context:
+            context += f"IMPORTANT - Your boss {self.name} just replied to your email with:\n"
+            context += f'"{self.boss_reply_context}"\n\n'
+            context += "Use this information to respond appropriately in the conversation.\n\n"
+            # Clear the context after using it
+            self.boss_reply_context = None
         
         # Add recent conversation history
         if self.conversation_history:
